@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "290050021659",
+    "project_id": "game-bb847",
+    "storage_bucket": "game-bb847.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:290050021659:android:95bfe9d9b85c7e4f969bbe",
+        "android_client_info": {
+          "package_name": "Game.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlS9kGzx4QEGMsTkNOfgLHxQ-9m5BIrog"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
