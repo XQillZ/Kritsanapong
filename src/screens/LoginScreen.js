@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
+import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import ScreenShell from '../components/ScreenShell';
 import { auth } from '../services/firebase';
+import { colors, radii, shadows } from '../theme/appTheme';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -69,170 +71,235 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.card}>
-        <Text style={styles.emoji}>👤</Text>
-        <Text style={styles.title}>เข้าสู่ระบบ</Text>
-        <Text style={styles.subtitle}>กรุณากรอกข้อมูลเพื่อเข้าใช้งาน</Text>
+    <ScreenShell accentColor={colors.accentSecondary} secondaryAccentColor={colors.accent}>
+      <KeyboardAvoidingView
+        style={styles.keyboardWrap}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.heroBlock}>
+          <Text style={styles.eyebrow}>WELCOME BACK</Text>
+          <Text style={styles.heroTitle}>เข้าสู่ระบบเพื่อเก็บสถิติและลุยลีดเดอร์บอร์ด</Text>
+          <Text style={styles.heroText}>ระบบจะบันทึกคะแนน ความคืบหน้า และผลลัพธ์การเล่นของคุณแบบครบถ้วน</Text>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="อีเมล"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={!loading}
-        />
+        <View style={styles.card}>
+          <View style={styles.badgeRow}>
+            <View style={styles.iconBadge}>
+              <Text style={styles.iconBadgeText}>🔐</Text>
+            </View>
+            <View>
+              <Text style={styles.cardTitle}>Login Account</Text>
+              <Text style={styles.cardSubtitle}>กรอกข้อมูลบัญชีเพื่อเข้าสู่ระบบ</Text>
+            </View>
+          </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="รหัสผ่าน"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-        />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>อีเมล</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="example@email.com"
+              placeholderTextColor={colors.textMuted}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!loading}
+            />
+          </View>
 
-        <TouchableOpacity 
-          style={[styles.loginButton, loading && styles.disabledButton]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.loginButtonText}>เข้าสู่ระบบ</Text>
-          )}
-        </TouchableOpacity>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>รหัสผ่าน</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="กรอกรหัสผ่านของคุณ"
+              placeholderTextColor={colors.textMuted}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!loading}
+            />
+          </View>
 
-        <TouchableOpacity 
-          style={styles.forgotPasswordButton}
-          onPress={handleForgotPassword}
-          disabled={loading}
-        >
-          <Text style={styles.forgotPasswordButtonText}>ลืมรหัสผ่าน?</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.primaryButton, loading && styles.disabledButton]}
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.9}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.primaryButtonText}>เข้าสู่ระบบ</Text>
+            )}
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.registerButton}
-          onPress={() => navigation.navigate('Register')}
-          disabled={loading}
-        >
-          <Text style={styles.registerButtonText}>ยังไม่มีบัญชี? สมัครสมาชิก</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.inlineButton}
+            onPress={handleForgotPassword}
+            disabled={loading}
+          >
+            <Text style={styles.inlineButtonText}>ลืมรหัสผ่าน?</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.guestButton}
-          onPress={() => navigation.replace('Home')}
-          disabled={loading}
-        >
-          <Text style={styles.guestButtonText}>เล่นโดยไม่ล็อกอิน</Text>
-        </TouchableOpacity>
+          <View style={styles.actionStack}>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => navigation.navigate('Register')}
+              disabled={loading}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.secondaryButtonText}>ยังไม่มีบัญชี? สมัครสมาชิก</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          disabled={loading}
-        >   
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+            <TouchableOpacity
+              style={styles.ghostButton}
+              onPress={() => navigation.replace('Home')}
+              disabled={loading}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.ghostButtonText}>เล่นโดยไม่ล็อกอิน</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  keyboardWrap: {
     flex: 1,
-    backgroundColor: '#2C3E50',
-    justifyContent: 'center',
-    padding: 20,
+    justifyContent: 'center'
+  },
+  heroBlock: {
+    marginTop: 16,
+    marginBottom: 14
+  },
+  eyebrow: {
+    color: colors.accentSecondary,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 6
+  },
+  heroTitle: {
+    color: colors.text,
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '800',
+    marginBottom: 8
+  },
+  heroText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 20
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 32,
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.xl,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card
+  },
+  badgeRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+    marginBottom: 18
   },
-  emoji: {
-    fontSize: 60,
-    marginBottom: 16,
+  iconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(32, 211, 255, 0.14)',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 8,
+  iconBadgeText: {
+    fontSize: 22
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    marginBottom: 24,
-    textAlign: 'center',
+  cardTitle: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 4
+  },
+  cardSubtitle: {
+    color: colors.textMuted,
+    fontSize: 12
+  },
+  fieldGroup: {
+    marginBottom: 12
+  },
+  fieldLabel: {
+    color: colors.textSoft,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6
   },
   input: {
     width: '100%',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    marginBottom: 12,
-    backgroundColor: '#FAFAFA',
+    borderColor: colors.borderStrong,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: colors.text,
+    backgroundColor: colors.surfaceMuted
   },
-  loginButton: {
+  primaryButton: {
     width: '100%',
-    backgroundColor: '#3498DB',
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    paddingVertical: 14,
+    borderRadius: radii.md,
     alignItems: 'center',
     marginTop: 8,
+    ...shadows.soft
   },
   disabledButton: {
     opacity: 0.7,
   },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+  primaryButtonText: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: '800'
   },
-  forgotPasswordButton: {
+  inlineButton: {
     alignSelf: 'flex-end',
     marginTop: 12,
-    marginBottom: 4,
+    marginBottom: 6
   },
-  forgotPasswordButtonText: {
-    color: '#E74C3C',
+  inlineButtonText: {
+    color: colors.accentSecondary,
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  actionStack: {
+    marginTop: 6,
+    gap: 10
+  },
+  secondaryButton: {
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    paddingVertical: 13,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)'
+  },
+  secondaryButtonText: {
+    color: colors.text,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '700'
   },
-  registerButton: {
-    marginTop: 16,
-    paddingVertical: 8,
+  ghostButton: {
+    alignItems: 'center',
+    paddingVertical: 8
   },
-  registerButtonText: {
-    color: '#27AE60',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  guestButton: {
-    marginTop: 12,
-    paddingVertical: 8,
-  },
-  guestButtonText: {
-    color: '#7F8C8D',
-    fontSize: 14,
-  },
-  backButton: {
-    marginTop: 8,
-    paddingVertical: 12,
-  },
-  backButtonText: {
-    color: '#95A5A6',
-    fontSize: 14,
+  ghostButtonText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600'
   },
 });

@@ -1,16 +1,17 @@
 {
   "expo": {
-    "name": "guessing-game",
+    "name": "AI Guess Game",
     "slug": "guessing-game",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "scheme": "gameend",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#2C3E50"
+      "backgroundColor": "#06111F"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -22,13 +23,26 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2C3E50"
+        "backgroundColor": "#06111F"
       },
-      "package": "com.yourcompany.guessinggame",
-      "googleServicesFile": "./google-services.json"
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.yourcompany.guessinggame"
+    },
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#06111F"
+    },
+    "androidNavigationBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#06111F"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "940fb181-dd4a-4b0b-9c3c-2ea34df3ba60"
+      }
     }
   }
 }

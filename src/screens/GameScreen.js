@@ -17,6 +17,9 @@ import { compareAnswers } from '../utils/textUtils';
 import { fetchQuestionsByCategory } from '../services/quizService';
 import { getRandomQuestions } from '../utils/shuffle';
 import { getHintFromGemini } from '../services/aiService';
+import ScreenShell from '../components/ScreenShell';
+import { categoryMeta, colors, difficultyMeta, radii, shadows } from '../theme/appTheme';
+import { getQuestionPrompt } from '../utils/questionPrompt';
 
 const QUESTIONS_PER_GAME = 10;
 
@@ -82,15 +85,26 @@ export default function GameScreen({ navigation, route }) {
 
   if (loading || questions.length === 0) {
     return (
-      <View style={[styles.container, { backgroundColor: category?.color || '#3498DB', justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#2C3E50" />
-        <Text style={{ marginTop: 16, color: '#2C3E50' }}>กำลังโหลด...</Text>
-      </View>
+      <ScreenShell scroll={false} accentColor={category?.color || colors.accent} secondaryAccentColor={colors.accentSecondary}>
+        <View style={styles.loadingWrap}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={colors.white} />
+            <Text style={styles.loadingTitle}>กำลังเตรียมคำถามให้คุณ</Text>
+            <Text style={styles.loadingText}>กำลังโหลดคำถามและสื่อที่ใช้ในรอบนี้</Text>
+          </View>
+        </View>
+      </ScreenShell>
     );
   }
 
   const currentQuestion = questions[currentIndex];
   const progress = ((currentIndex) / questions.length) * 100;
+  const categoryInfo = categoryMeta[category.id];
+  const difficultyInfo = difficultyMeta[difficulty];
+  const currentQuestionPrompt = getQuestionPrompt(currentQuestion, category.name);
+  const answerDisplay = currentQuestion.answerEn
+    ? `${currentQuestion.answer} หรือ ${currentQuestion.answerEn}`
+    : currentQuestion.answer;
 
   const playAudio = async () => {
     if (!currentQuestion.audioUrl) return;
@@ -125,7 +139,7 @@ export default function GameScreen({ navigation, route }) {
     setIsHintLoading(true);
     const hintText = await getHintFromGemini(
       category.name,
-      currentQuestion.question || '',
+      currentQuestionPrompt,
       currentQuestion.answer
     );
     setHint(hintText);
@@ -194,351 +208,527 @@ export default function GameScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={[styles.container, { backgroundColor: category.color }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.progressContainer}>
-        <View style={[styles.progressBar, { width: `${progress}%` }]} />
-        <Text style={styles.progressText}>
-          {currentIndex + 1} / {questions.length}
-        </Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
-          {currentQuestion.question && (
-            <View style={styles.textQuestionContainer}>
-              <Text style={styles.textQuestion}>{currentQuestion.question}</Text>
-            </View>
-          )}
-
-          {currentQuestion.displayMediaMode === 'image' && currentQuestion.imageUrl && (
-            <View style={styles.imageContainer}>
-              {imageLoading && (
-                <View style={styles.imagePlaceholder}>
-                  <ActivityIndicator size="large" color="#2C3E50" />
-                </View>
-              )}
-              <Image
-                source={{ uri: currentQuestion.imageUrl }}
-                style={styles.image}
-                resizeMode="cover"
-                onLoadStart={() => setImageLoading(true)}
-                onLoadEnd={() => setImageLoading(false)}
-              />
-            </View>
-          )}
-
-          {currentQuestion.displayMediaMode === 'audio' && currentQuestion.audioUrl && (
-            <TouchableOpacity 
-              style={[styles.audioButton, isPlaying && styles.audioButtonPlaying]} 
-              onPress={playAudio}
-              disabled={isPlaying}
-            >
-              <Text style={styles.audioButtonText}>
-                {isPlaying ? '🔊 กำลังเล่น...' : '▶️ ฟังเสียงคำถาม'}
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {currentQuestion.displayMediaMode === 'none' && !currentQuestion.question && (
-            <View style={styles.noMediaContainer}>
-               <Text style={styles.noMediaText}>ไม่มีรูปภาพหรือเสียง</Text>
-            </View>
-          )}
-
-          {!showingFeedback ? (
-          <>
-            {hint ? (
-              <View style={styles.hintDisplayContainer}>
-                <Text style={styles.hintDisplayEmoji}>💡</Text>
-                <Text style={styles.hintDisplayText}>{hint}</Text>
+    <ScreenShell scroll={false} accentColor={category.color} secondaryAccentColor={difficultyInfo?.accent || colors.warning}>
+      <KeyboardAvoidingView
+        style={styles.keyboardWrap}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.headerCard}>
+          <View style={styles.headerTopRow}>
+            <View style={styles.headerIdentity}>
+              <View style={[styles.headerIconWrap, { backgroundColor: `${category.color}22` }]}> 
+                <Text style={styles.headerIcon}>{categoryInfo?.icon || '🎮'}</Text>
               </View>
-            ) : (
-              <TouchableOpacity 
-                style={[styles.hintRequestButton, isHintLoading && styles.hintRequestButtonDisabled]} 
-                onPress={handleRequestHint}
-                disabled={isHintLoading}
+              <View>
+                <Text style={styles.headerEyebrow}>{category.name}</Text>
+                <Text style={styles.headerTitle}>ข้อที่ {currentIndex + 1} จาก {questions.length}</Text>
+              </View>
+            </View>
+            <View style={[styles.modeBadge, { backgroundColor: `${difficultyInfo?.accent || colors.warning}22` }]}>
+              <Text style={[styles.modeBadgeText, { color: difficultyInfo?.accent || colors.warning }]}>{difficulty?.toUpperCase()}</Text>
+            </View>
+          </View>
+
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressBar, { width: `${progress}%`, backgroundColor: category.color }]} />
+          </View>
+
+          <View style={styles.metricsRow}>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricLabel}>คะแนนปัจจุบัน</Text>
+              <Text style={styles.metricValue}>{score}</Text>
+            </View>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricLabel}>คำใบ้</Text>
+              <Text style={styles.metricValue}>{usedHint ? 'ใช้แล้ว' : 'พร้อมใช้'}</Text>
+            </View>
+          </View>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.card}>
+            <View style={styles.questionPill}>
+              <Text style={styles.questionPillText}>โจทย์ประจำข้อ</Text>
+            </View>
+
+            <View style={styles.textQuestionContainer}>
+              <Text style={styles.textQuestion}>{currentQuestionPrompt}</Text>
+            </View>
+
+            {currentQuestion.displayMediaMode === 'image' && currentQuestion.imageUrl && (
+              <View style={styles.imageContainer}>
+                {imageLoading && (
+                  <View style={styles.imagePlaceholder}>
+                    <ActivityIndicator size="large" color={colors.white} />
+                  </View>
+                )}
+                <Image
+                  source={{ uri: currentQuestion.imageUrl }}
+                  style={styles.image}
+                  resizeMode="cover"
+                  onLoadStart={() => setImageLoading(true)}
+                  onLoadEnd={() => setImageLoading(false)}
+                />
+              </View>
+            )}
+
+            {currentQuestion.displayMediaMode === 'audio' && currentQuestion.audioUrl && (
+              <TouchableOpacity
+                style={[styles.audioButton, isPlaying && styles.audioButtonPlaying]}
+                onPress={playAudio}
+                disabled={isPlaying}
+                activeOpacity={0.9}
               >
-                <Text style={styles.hintRequestButtonText}>
-                  {isHintLoading ? 'กำลังคิดคำใบ้...' : `💡 ขอคำใบ้ ${difficulty === 'hard' ? '(โหมดยากเหลือ 1 คะแนน)' : ''}`}
-                </Text>
+                <Text style={styles.audioButtonEmoji}>{isPlaying ? '🔊' : '🎧'}</Text>
+                <View>
+                  <Text style={styles.audioButtonTitle}>{isPlaying ? 'กำลังเล่นเสียงคำถาม...' : 'แตะเพื่อฟังเสียงคำถาม'}</Text>
+                  <Text style={styles.audioButtonText}>{isPlaying ? 'กำลังเล่นไฟล์เสียง' : 'ใช้สำหรับคำถามที่อ้างอิงจากเสียงหรือสื่อผสม'}</Text>
+                </View>
               </TouchableOpacity>
             )}
 
-            <Text style={styles.hint}>คำตอบคืออะไร?</Text>
-            <TextInput
-              style={styles.input}
-              value={userAnswer}
-              onChangeText={setUserAnswer}
-              placeholder="พิมพ์คำตอบที่นี่..."
-              placeholderTextColor="#95A5A6"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-              <Text style={styles.submitButtonText}>ส่งคำตอบ</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <View style={styles.feedbackContainer}>
-            <View style={[styles.feedbackBadge, isCorrect ? styles.correctBadge : styles.wrongBadge]}>
-              <Text style={styles.feedbackEmoji}>{isCorrect ? '✅' : '❌'}</Text>
-              <Text style={styles.feedbackText}>
-                {isCorrect ? 'ถูกต้อง!' : 'ผิด!'}
-              </Text>
-            </View>
-            {!isCorrect && (
-              <Text style={styles.correctAnswer}>
-                คำตอบที่ถูกต้อง: {currentQuestion.answer} หรือ {currentQuestion.answerEn}
-              </Text>
+            {currentQuestion.displayMediaMode === 'none' && (
+              <View style={styles.noMediaContainer}>
+                <Text style={styles.noMediaEmoji}>🧩</Text>
+                <Text style={styles.noMediaTitle}>ไม่มีรูปภาพหรือเสียงสำหรับข้อนี้</Text>
+                <Text style={styles.noMediaText}>ให้ใช้ข้อความโจทย์และคำใบ้อัจฉริยะช่วยวิเคราะห์คำตอบ</Text>
+              </View>
             )}
-            <Text style={styles.yourAnswer}>
-              คำตอบของคุณ: {userAnswer}
-            </Text>
-            <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-              <Text style={styles.nextButtonText}>
-                {currentIndex + 1 < questions.length ? 'ข้อถัดไป →' : 'ดูผลลัพธ์'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-      </ScrollView>
 
-      <View style={styles.scoreContainer}>
-        <Text style={styles.scoreText}>คะแนน: {score} / {questions.length}</Text>
-      </View>
-    </KeyboardAvoidingView>
+            {!showingFeedback ? (
+              <>
+                {hint ? (
+                  <View style={styles.hintDisplayContainer}>
+                    <Text style={styles.hintDisplayEmoji}>💡</Text>
+                    <View style={styles.hintDisplayContent}>
+                      <Text style={styles.hintDisplayLabel}>คำใบ้</Text>
+                      <Text style={styles.hintDisplayText}>{hint}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.hintRequestButton, isHintLoading && styles.hintRequestButtonDisabled]}
+                    onPress={handleRequestHint}
+                    disabled={isHintLoading}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.hintRequestButtonText}>
+                      {isHintLoading ? 'กำลังสร้างคำใบ้อัจฉริยะ...' : `💡 ขอคำใบ้ ${difficulty === 'hard' ? '(โหมดยากเหลือ 1 คะแนน)' : ''}`}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                <View style={styles.answerSection}>
+                  <Text style={styles.answerLabel}>คำตอบของคุณ</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={userAnswer}
+                    onChangeText={setUserAnswer}
+                    placeholder="พิมพ์คำตอบที่นี่..."
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity style={[styles.submitButton, { backgroundColor: category.color }]} onPress={handleSubmit} activeOpacity={0.92}>
+                    <Text style={styles.submitButtonText}>ส่งคำตอบ</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <View style={styles.feedbackContainer}>
+                <View style={[styles.feedbackBadge, isCorrect ? styles.correctBadge : styles.wrongBadge]}>
+                  <Text style={styles.feedbackEmoji}>{isCorrect ? '✅' : '❌'}</Text>
+                  <Text style={styles.feedbackText}>{isCorrect ? 'ถูกต้อง!' : 'ยังไม่ถูกนะ'}</Text>
+                  <Text style={styles.feedbackSubtext}>{isCorrect ? 'ยอดเยี่ยม คุณเก็บคะแนนเพิ่มได้แล้ว' : 'ลองดูคำตอบที่ถูกต้องแล้วไปต่อข้อต่อไป'}</Text>
+                </View>
+                {!isCorrect && (
+                  <Text style={styles.correctAnswer}>คำตอบที่ถูกต้อง: {answerDisplay}</Text>
+                )}
+                <Text style={styles.yourAnswer}>คำตอบของคุณ: {userAnswer}</Text>
+                <TouchableOpacity style={styles.nextButton} onPress={handleNext} activeOpacity={0.92}>
+                  <Text style={styles.nextButtonText}>
+                    {currentIndex + 1 < questions.length ? 'ไปข้อถัดไป' : 'ดูผลลัพธ์'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  keyboardWrap: {
     flex: 1,
-    padding: 20,
   },
-  progressContainer: {
-    marginBottom: 20,
+  loadingWrap: {
+    flex: 1,
+    justifyContent: 'center'
+  },
+  loadingCard: {
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 22,
+    alignItems: 'center',
+    ...shadows.card
+  },
+  loadingTitle: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '800',
+    marginTop: 14,
+    marginBottom: 8,
+    textAlign: 'center'
+  },
+  loadingText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center'
+  },
+  headerCard: {
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginTop: 8,
+    marginBottom: 12,
+    ...shadows.card
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 10
+  },
+  headerIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1
+  },
+  headerIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10
+  },
+  headerIcon: {
+    fontSize: 20
+  },
+  headerEyebrow: {
+    color: colors.accentSecondary,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    marginBottom: 2
+  },
+  headerTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '800'
+  },
+  modeBadge: {
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6
+  },
+  modeBadgeText: {
+    fontSize: 10,
+    fontWeight: '800'
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    overflow: 'hidden',
+    marginBottom: 10
   },
   progressBar: {
-    height: 6,
-    backgroundColor: '#2C3E50',
-    borderRadius: 3,
-    marginBottom: 8,
+    height: '100%',
+    borderRadius: radii.pill
   },
-  progressText: {
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: radii.md,
+    paddingVertical: 10,
+    paddingHorizontal: 12
+  },
+  metricLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    marginBottom: 4
+  },
+  metricValue: {
+    color: colors.text,
     fontSize: 14,
-    color: '#2C3E50',
-    fontWeight: '600',
-    textAlign: 'right',
+    fontWeight: '800'
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    marginBottom: 20,
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.xl,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.card
   },
   scrollContent: {
-    flexGrow: 1,
+    paddingBottom: 16
+  },
+  questionPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: radii.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 12
+  },
+  questionPillText: {
+    color: colors.textSoft,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8
   },
   textQuestionContainer: {
-    marginBottom: 20,
-    padding: 15,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#3498DB',
+    marginBottom: 14,
+    padding: 14,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accentSecondary
   },
   textQuestion: {
-    fontSize: 20,
-    color: '#2C3E50',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    lineHeight: 28,
+    fontSize: 16,
+    color: colors.text,
+    fontWeight: '800',
+    lineHeight: 24
   },
   imageContainer: {
     width: '100%',
-    aspectRatio: 1,
-    borderRadius: 16,
+    aspectRatio: 1.02,
+    borderRadius: radii.xl,
     overflow: 'hidden',
-    backgroundColor: '#F5F5F5',
-    marginBottom: 20,
+    backgroundColor: colors.surfaceMuted,
+    marginBottom: 14
   },
   imagePlaceholder: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.surfaceMuted,
+    zIndex: 1
   },
   image: {
     width: '100%',
-    height: '100%',
-    borderRadius: 16,
+    height: '100%'
   },
   audioButton: {
-    backgroundColor: '#9B59B6',
+    backgroundColor: 'rgba(165, 109, 255, 0.18)',
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    borderRadius: radii.lg,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 14,
     flexDirection: 'row',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(165, 109, 255, 0.28)'
   },
   audioButtonPlaying: {
-    backgroundColor: '#8E44AD',
+    backgroundColor: 'rgba(165, 109, 255, 0.28)'
+  },
+  audioButtonEmoji: {
+    fontSize: 24,
+    marginRight: 10
+  },
+  audioButtonTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 2
   },
   audioButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: colors.textMuted,
+    fontSize: 11,
+    lineHeight: 17
   },
   noMediaContainer: {
-    height: 150,
+    minHeight: 150,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 16,
-    marginBottom: 20,
+    backgroundColor: colors.surface,
+    borderRadius: radii.xl,
+    marginBottom: 14,
+    padding: 18
+  },
+  noMediaEmoji: {
+    fontSize: 28,
+    marginBottom: 8
+  },
+  noMediaTitle: {
+    fontSize: 16,
+    color: colors.text,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 6
   },
   noMediaText: {
-    fontSize: 16,
-    color: '#95A5A6',
-  },
-  noImage: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  noImageText: {
-    fontSize: 16,
-    color: '#95A5A6',
-  },
-  hint: {
-    fontSize: 18,
-    color: '#2C3E50',
+    fontSize: 12,
+    color: colors.textMuted,
     textAlign: 'center',
-    marginBottom: 16,
-    fontWeight: '600',
+    lineHeight: 18
+  },
+  answerSection: {
+    marginTop: 2
+  },
+  answerLabel: {
+    fontSize: 14,
+    color: colors.textSoft,
+    marginBottom: 8,
+    fontWeight: '700'
   },
   input: {
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 18,
-    color: '#2C3E50',
-    backgroundColor: '#FAFAFA',
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: colors.text,
+    backgroundColor: colors.surfaceMuted,
+    marginBottom: 12
   },
   submitButton: {
-    backgroundColor: '#2C3E50',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: radii.md,
     alignItems: 'center',
+    ...shadows.soft
   },
   submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '800'
   },
   feedbackContainer: {
-    alignItems: 'center',
+    alignItems: 'center'
   },
   feedbackBadge: {
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 12,
+    width: '100%',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    borderRadius: radii.lg,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12
   },
   correctBadge: {
-    backgroundColor: '#27AE60',
+    backgroundColor: 'rgba(39, 214, 155, 0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(39, 214, 155, 0.32)'
   },
   wrongBadge: {
-    backgroundColor: '#E74C3C',
+    backgroundColor: 'rgba(255, 107, 122, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 122, 0.3)'
   },
   feedbackEmoji: {
-    fontSize: 40,
-    marginBottom: 8,
+    fontSize: 30,
+    marginBottom: 6
   },
   feedbackText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 4
+  },
+  feedbackSubtext: {
+    fontSize: 12,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 18
   },
   correctAnswer: {
-    fontSize: 18,
-    color: '#27AE60',
-    fontWeight: '600',
-    marginBottom: 8,
+    width: '100%',
+    fontSize: 14,
+    color: colors.success,
+    fontWeight: '700',
+    marginBottom: 6,
+    textAlign: 'center'
   },
   yourAnswer: {
-    fontSize: 16,
-    color: '#7F8C8D',
-    marginBottom: 20,
+    fontSize: 14,
+    color: colors.textMuted,
+    marginBottom: 14,
+    textAlign: 'center'
   },
   nextButton: {
-    backgroundColor: '#3498DB',
-    paddingHorizontal: 40,
-    paddingVertical: 16,
-    borderRadius: 30,
+    width: '100%',
+    backgroundColor: colors.accentSecondary,
+    paddingVertical: 14,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    ...shadows.soft
   },
   nextButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  scoreContainer: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  scoreText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    color: colors.black,
+    fontSize: 16,
+    fontWeight: '800'
   },
   hintRequestButton: {
-    backgroundColor: '#F39C12',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 184, 77, 0.18)',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: radii.md,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 184, 77, 0.28)'
   },
   hintRequestButtonDisabled: {
-    backgroundColor: '#F39C1280',
+    opacity: 0.7
   },
   hintRequestButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '700'
   },
   hintDisplayContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFF9C4',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+    backgroundColor: 'rgba(255, 184, 77, 0.16)',
+    padding: 12,
+    borderRadius: radii.lg,
+    marginBottom: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F1C40F',
+    borderColor: 'rgba(255, 184, 77, 0.3)'
   },
   hintDisplayEmoji: {
-    fontSize: 24,
-    marginRight: 12,
+    fontSize: 18,
+    marginRight: 10
+  },
+  hintDisplayContent: {
+    flex: 1
+  },
+  hintDisplayLabel: {
+    color: colors.warning,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 3
   },
   hintDisplayText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#D35400',
-    lineHeight: 24,
-  },
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20
+  }
 });
