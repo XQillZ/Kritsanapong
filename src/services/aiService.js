@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// ดึง API Key จากไฟล์ .env (ถ้าไม่มีจะใช้ Default Key สำหรับ Build APK)
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || "AIzaSyCSwlESSRYifrkzX9JSi2bifbimTiTzHkk";
+// ดึง API Key จากไฟล์ .env หรือ Environment Variable ใน EAS
+const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 
 export const getHintFromGemini = async (category, questionText, answer) => {
   if (!GEMINI_API_KEY) {
