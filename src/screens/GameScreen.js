@@ -195,12 +195,7 @@ export default function GameScreen({ navigation, route }) {
       navigation.navigate('Result', {
         score,
         total: questions.length,
-        answeredQuestions: [...answeredQuestions, {
-          question: currentQuestion,
-          userAnswer,
-          correct: isCorrect,
-          usedHint
-        }],
+        answeredQuestions,
         category,
         difficulty
       });
@@ -213,53 +208,80 @@ export default function GameScreen({ navigation, route }) {
         style={styles.keyboardWrap}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.headerCard}>
+        {/* Cyber HUD Header */}
+        <View style={[styles.headerCard, { borderColor: `${category.color}55` }]}>
+          <View style={[styles.headerGlowSheen, { backgroundColor: category.color }]} />
+
           <View style={styles.headerTopRow}>
             <View style={styles.headerIdentity}>
-              <View style={[styles.headerIconWrap, { backgroundColor: `${category.color}22` }]}> 
+              <View style={[styles.headerIconWrap, { backgroundColor: `${category.color}25`, borderColor: category.color }]}> 
                 <Text style={styles.headerIcon}>{categoryInfo?.icon || '🎮'}</Text>
               </View>
-              <View>
-                <Text style={styles.headerEyebrow}>{category.name}</Text>
-                <Text style={styles.headerTitle}>ข้อที่ {currentIndex + 1} จาก {questions.length}</Text>
+              <View style={styles.headerTitleWrap}>
+                <Text style={[styles.headerEyebrow, { color: category.color }]}>{category.name.toUpperCase()}</Text>
+                <Text style={styles.headerTitle}>ข้อที่ {currentIndex + 1} / {questions.length}</Text>
               </View>
             </View>
-            <View style={[styles.modeBadge, { backgroundColor: `${difficultyInfo?.accent || colors.warning}22` }]}>
-              <Text style={[styles.modeBadgeText, { color: difficultyInfo?.accent || colors.warning }]}>{difficulty?.toUpperCase()}</Text>
+
+            <View style={[styles.modeBadge, { 
+              backgroundColor: difficulty === 'hard' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+              borderColor: difficulty === 'hard' ? '#EF4444' : '#10B981'
+            }]}>
+              <Text style={[styles.modeBadgeText, { color: difficulty === 'hard' ? '#F87171' : '#34D399' }]}>
+                {difficulty === 'hard' ? '🔥 HARD (2 PTS)' : '🌱 EASY (1 PT)'}
+              </Text>
             </View>
           </View>
 
+          {/* Animated Neon Progress Track */}
           <View style={styles.progressTrack}>
             <View style={[styles.progressBar, { width: `${progress}%`, backgroundColor: category.color }]} />
           </View>
 
+          {/* HUD Mini Metrics Row */}
           <View style={styles.metricsRow}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>คะแนนปัจจุบัน</Text>
-              <Text style={styles.metricValue}>{score}</Text>
+            <View style={[styles.metricCard, styles.metricScoreCard]}>
+              <Text style={styles.metricEmoji}>⭐</Text>
+              <View>
+                <Text style={styles.metricLabel}>คะแนนสะสม</Text>
+                <Text style={styles.metricValueGold}>{score} แต้ม</Text>
+              </View>
             </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>คำใบ้</Text>
-              <Text style={styles.metricValue}>{usedHint ? 'ใช้แล้ว' : 'พร้อมใช้'}</Text>
+
+            <View style={[styles.metricCard, styles.metricHintCard]}>
+              <Text style={styles.metricEmoji}>🤖</Text>
+              <View>
+                <Text style={styles.metricLabel}>AI คำใบ้</Text>
+                <Text style={[styles.metricValue, { color: usedHint ? '#9CA3AF' : '#C084FC' }]}>
+                  {usedHint ? 'ใช้แล้ว' : 'พร้อมใช้งาน'}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
+        {/* Main Quiz Combat Card */}
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.card}>
-            <View style={styles.questionPill}>
-              <Text style={styles.questionPillText}>โจทย์ประจำข้อ</Text>
+            <View style={styles.cardTopSheen} />
+
+            {/* Question Badge & Title */}
+            <View style={styles.questionHeaderRow}>
+              <View style={[styles.questionPill, { backgroundColor: `${category.color}25`, borderColor: category.color }]}>
+                <Text style={[styles.questionPillText, { color: category.color }]}>● QUESTION #{currentIndex + 1}</Text>
+              </View>
             </View>
 
             <View style={styles.textQuestionContainer}>
               <Text style={styles.textQuestion}>{currentQuestionPrompt}</Text>
             </View>
 
+            {/* Image Media Arena */}
             {currentQuestion.displayMediaMode === 'image' && currentQuestion.imageUrl && (
-              <View style={styles.imageContainer}>
+              <View style={[styles.imageContainer, { borderColor: `${category.color}45` }]}>
                 {imageLoading && (
                   <View style={styles.imagePlaceholder}>
-                    <ActivityIndicator size="large" color={colors.white} />
+                    <ActivityIndicator size="large" color={category.color} />
                   </View>
                 )}
                 <Image
@@ -272,17 +294,27 @@ export default function GameScreen({ navigation, route }) {
               </View>
             )}
 
+            {/* Audio Media Arena */}
             {currentQuestion.displayMediaMode === 'audio' && currentQuestion.audioUrl && (
               <TouchableOpacity
-                style={[styles.audioButton, isPlaying && styles.audioButtonPlaying]}
+                style={[
+                  styles.audioButton, 
+                  isPlaying ? styles.audioButtonPlaying : styles.audioButtonIdle
+                ]}
                 onPress={playAudio}
                 disabled={isPlaying}
-                activeOpacity={0.9}
+                activeOpacity={0.88}
               >
-                <Text style={styles.audioButtonEmoji}>{isPlaying ? '🔊' : '🎧'}</Text>
-                <View>
-                  <Text style={styles.audioButtonTitle}>{isPlaying ? 'กำลังเล่นเสียงคำถาม...' : 'แตะเพื่อฟังเสียงคำถาม'}</Text>
-                  <Text style={styles.audioButtonText}>{isPlaying ? 'กำลังเล่นไฟล์เสียง' : 'ใช้สำหรับคำถามที่อ้างอิงจากเสียงหรือสื่อผสม'}</Text>
+                <View style={[styles.audioIconCircle, isPlaying && styles.audioIconPlaying]}>
+                  <Text style={styles.audioButtonEmoji}>{isPlaying ? '🔊' : '🎧'}</Text>
+                </View>
+                <View style={styles.audioContentWrap}>
+                  <Text style={styles.audioButtonTitle}>
+                    {isPlaying ? 'กำลังเล่นไฟล์เสียง...' : 'แตะเพื่อฟังเสียงคำถาม'}
+                  </Text>
+                  <Text style={styles.audioButtonText}>
+                    {isPlaying ? 'ฟังเสียงให้ละเอียดแล้วพิมพ์คำตอบ' : 'คำถามนี้อ้างอิงจากเสียงปริศนา'}
+                  </Text>
                 </View>
               </TouchableOpacity>
             )}
@@ -290,64 +322,91 @@ export default function GameScreen({ navigation, route }) {
             {currentQuestion.displayMediaMode === 'none' && (
               <View style={styles.noMediaContainer}>
                 <Text style={styles.noMediaEmoji}>🧩</Text>
-                <Text style={styles.noMediaTitle}>ไม่มีรูปภาพหรือเสียงสำหรับข้อนี้</Text>
-                <Text style={styles.noMediaText}>ให้ใช้ข้อความโจทย์และคำใบ้อัจฉริยะช่วยวิเคราะห์คำตอบ</Text>
+                <Text style={styles.noMediaTitle}>คำถามแบบข้อความ</Text>
+                <Text style={styles.noMediaText}>ใช้ข้อความโจทย์และคำใบ้ AI ช่วยคิดคำตอบ</Text>
               </View>
             )}
 
             {!showingFeedback ? (
               <>
+                {/* AI Hint Section */}
                 {hint ? (
                   <View style={styles.hintDisplayContainer}>
-                    <Text style={styles.hintDisplayEmoji}>💡</Text>
-                    <View style={styles.hintDisplayContent}>
-                      <Text style={styles.hintDisplayLabel}>คำใบ้</Text>
-                      <Text style={styles.hintDisplayText}>{hint}</Text>
+                    <View style={styles.hintDisplayHeader}>
+                      <Text style={styles.hintDisplayEmoji}>💡</Text>
+                      <Text style={styles.hintDisplayLabel}>AI คำใบ้อัจฉริยะ</Text>
                     </View>
+                    <Text style={styles.hintDisplayText}>{hint}</Text>
                   </View>
                 ) : (
                   <TouchableOpacity
-                    style={[styles.hintRequestButton, isHintLoading && styles.hintRequestButtonDisabled]}
+                    style={[
+                      styles.hintRequestButton, 
+                      isHintLoading && styles.hintRequestButtonDisabled
+                    ]}
                     onPress={handleRequestHint}
                     disabled={isHintLoading}
-                    activeOpacity={0.9}
+                    activeOpacity={0.88}
                   >
                     <Text style={styles.hintRequestButtonText}>
-                      {isHintLoading ? 'กำลังสร้างคำใบ้อัจฉริยะ...' : `💡 ขอคำใบ้ ${difficulty === 'hard' ? '(โหมดยากเหลือ 1 คะแนน)' : ''}`}
+                      {isHintLoading 
+                        ? '⚡ AI กำลังประมวลผลคำใบ้...' 
+                        : `💡 ขอคำใบ้ AI ${difficulty === 'hard' ? '(โหมดยากได้ 1 คะแนน)' : ''}`}
                     </Text>
                   </TouchableOpacity>
                 )}
 
+                {/* Cyber Input Section */}
                 <View style={styles.answerSection}>
-                  <Text style={styles.answerLabel}>คำตอบของคุณ</Text>
+                  <Text style={styles.answerLabel}>⌨️ คำตอบของคุณ</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { borderColor: `${category.color}66` }]}
                     value={userAnswer}
                     onChangeText={setUserAnswer}
-                    placeholder="พิมพ์คำตอบที่นี่..."
-                    placeholderTextColor={colors.textMuted}
+                    placeholder="พิมพ์คำตอบภาษาไทย หรือ อังกฤษ..."
+                    placeholderTextColor="#6B7280"
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
-                  <TouchableOpacity style={[styles.submitButton, { backgroundColor: category.color }]} onPress={handleSubmit} activeOpacity={0.92}>
-                    <Text style={styles.submitButtonText}>ส่งคำตอบ</Text>
+                  <TouchableOpacity 
+                    style={[styles.submitButton, { backgroundColor: category.color }]} 
+                    onPress={handleSubmit} 
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.submitButtonText}>🚀 ส่งคำตอบ</Text>
                   </TouchableOpacity>
                 </View>
               </>
             ) : (
+              /* Feedback Display */
               <View style={styles.feedbackContainer}>
                 <View style={[styles.feedbackBadge, isCorrect ? styles.correctBadge : styles.wrongBadge]}>
-                  <Text style={styles.feedbackEmoji}>{isCorrect ? '✅' : '❌'}</Text>
-                  <Text style={styles.feedbackText}>{isCorrect ? 'ถูกต้อง!' : 'ยังไม่ถูกนะ'}</Text>
-                  <Text style={styles.feedbackSubtext}>{isCorrect ? 'ยอดเยี่ยม คุณเก็บคะแนนเพิ่มได้แล้ว' : 'ลองดูคำตอบที่ถูกต้องแล้วไปต่อข้อต่อไป'}</Text>
+                  <Text style={styles.feedbackEmoji}>{isCorrect ? '🎉' : '❌'}</Text>
+                  <Text style={styles.feedbackText}>{isCorrect ? 'ถูกต้องยอดเยี่ยม!' : 'ยังไม่ถูกต้องนะ'}</Text>
+                  <Text style={styles.feedbackSubtext}>
+                    {isCorrect ? `+${difficulty === 'hard' && !usedHint ? '2' : '1'} คะแนน เข้าสู่กระเป๋าแล้ว!` : 'ลองจำคำตอบที่ถูกต้อง แล้วลุยข้อถัดไปกันต่อ'}
+                  </Text>
                 </View>
+
                 {!isCorrect && (
-                  <Text style={styles.correctAnswer}>คำตอบที่ถูกต้อง: {answerDisplay}</Text>
+                  <View style={styles.correctAnswerCard}>
+                    <Text style={styles.correctAnswerLabel}>💡 คำตอบที่ถูกต้อง:</Text>
+                    <Text style={styles.correctAnswerText}>{answerDisplay}</Text>
+                  </View>
                 )}
-                <Text style={styles.yourAnswer}>คำตอบของคุณ: {userAnswer}</Text>
-                <TouchableOpacity style={styles.nextButton} onPress={handleNext} activeOpacity={0.92}>
+
+                <View style={styles.yourAnswerCard}>
+                  <Text style={styles.yourAnswerLabel}>คำตอบของคุณ:</Text>
+                  <Text style={styles.yourAnswerText}>{userAnswer}</Text>
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.nextButton, { backgroundColor: category.color }]} 
+                  onPress={handleNext} 
+                  activeOpacity={0.9}
+                >
                   <Text style={styles.nextButtonText}>
-                    {currentIndex + 1 < questions.length ? 'ไปข้อถัดไป' : 'ดูผลลัพธ์'}
+                    {currentIndex + 1 < questions.length ? '➔ ไปข้อถัดไป' : '🏆 ดูผลการแข่งขัน'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -361,31 +420,32 @@ export default function GameScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   keyboardWrap: {
-    flex: 1,
+    flex: 1
   },
   loadingWrap: {
     flex: 1,
-    justifyContent: 'center'
+    justifyContent: 'center',
+    padding: 16
   },
   loadingCard: {
     backgroundColor: colors.surfaceStrong,
     borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 22,
+    borderWidth: 1.5,
+    borderColor: 'rgba(99, 102, 241, 0.4)',
+    padding: 24,
     alignItems: 'center',
     ...shadows.card
   },
   loadingTitle: {
-    color: colors.text,
+    color: colors.white,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '900',
     marginTop: 14,
     marginBottom: 8,
     textAlign: 'center'
   },
   loadingText: {
-    color: colors.textMuted,
+    color: '#D1D5DB',
     fontSize: 13,
     lineHeight: 20,
     textAlign: 'center'
@@ -393,12 +453,21 @@ const styles = StyleSheet.create({
   headerCard: {
     backgroundColor: colors.surfaceStrong,
     borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 1.5,
     padding: 14,
-    marginTop: 8,
-    marginBottom: 12,
+    marginTop: 6,
+    marginBottom: 10,
+    overflow: 'hidden',
+    position: 'relative',
     ...shadows.card
+  },
+  headerGlowSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    opacity: 0.8
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -418,36 +487,41 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1.5,
     marginRight: 10
   },
   headerIcon: {
     fontSize: 20
   },
+  headerTitleWrap: {
+    flex: 1
+  },
   headerEyebrow: {
-    color: colors.accentSecondary,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '900',
     letterSpacing: 0.8,
     marginBottom: 2
   },
   headerTitle: {
-    color: colors.text,
+    color: colors.white,
     fontSize: 16,
-    fontWeight: '800'
+    fontWeight: '900'
   },
   modeBadge: {
     borderRadius: radii.pill,
     paddingHorizontal: 10,
-    paddingVertical: 6
+    paddingVertical: 5,
+    borderWidth: 1
   },
   modeBadgeText: {
     fontSize: 10,
-    fontWeight: '800'
+    fontWeight: '900',
+    letterSpacing: 0.5
   },
   progressTrack: {
     height: 6,
     borderRadius: radii.pill,
-    backgroundColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     overflow: 'hidden',
     marginBottom: 10
   },
@@ -461,73 +535,104 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: radii.md,
-    paddingVertical: 10,
-    paddingHorizontal: 12
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radii.lg,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1
+  },
+  metricScoreCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderColor: 'rgba(245, 158, 11, 0.35)'
+  },
+  metricHintCard: {
+    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+    borderColor: 'rgba(168, 85, 247, 0.35)'
+  },
+  metricEmoji: {
+    fontSize: 18,
+    marginRight: 8
   },
   metricLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    marginBottom: 4
+    color: '#9CA3AF',
+    fontSize: 9,
+    fontWeight: '700',
+    marginBottom: 1
+  },
+  metricValueGold: {
+    color: '#FBBF24',
+    fontSize: 13,
+    fontWeight: '900'
   },
   metricValue: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '800'
+    fontSize: 13,
+    fontWeight: '900'
+  },
+  scrollContent: {
+    paddingBottom: 20
   },
   card: {
     backgroundColor: colors.surfaceStrong,
     borderRadius: radii.xl,
     padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+    position: 'relative',
     ...shadows.card
   },
-  scrollContent: {
-    paddingBottom: 16
+  cardTopSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)'
+  },
+  questionHeaderRow: {
+    flexDirection: 'row',
+    marginBottom: 8
   },
   questionPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.06)',
     borderRadius: radii.pill,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 12
+    paddingVertical: 4,
+    borderWidth: 1
   },
   questionPillText: {
-    color: colors.textSoft,
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
     letterSpacing: 0.8
   },
   textQuestionContainer: {
     marginBottom: 14,
     padding: 14,
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: radii.lg,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.accentSecondary
+    borderLeftWidth: 3.5,
+    borderLeftColor: '#818CF8'
   },
   textQuestion: {
     fontSize: 16,
-    color: colors.text,
+    color: colors.white,
     fontWeight: '800',
     lineHeight: 24
   },
   imageContainer: {
     width: '100%',
-    aspectRatio: 1.02,
+    aspectRatio: 1.05,
     borderRadius: radii.xl,
     overflow: 'hidden',
-    backgroundColor: colors.surfaceMuted,
-    marginBottom: 14
+    backgroundColor: '#05021a',
+    marginBottom: 14,
+    borderWidth: 1.5
   },
   imagePlaceholder: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: '#05021a',
     zIndex: 1
   },
   image: {
@@ -535,200 +640,258 @@ const styles = StyleSheet.create({
     height: '100%'
   },
   audioButton: {
-    backgroundColor: 'rgba(165, 109, 255, 0.18)',
     paddingVertical: 14,
     paddingHorizontal: 14,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     alignItems: 'center',
     marginBottom: 14,
     flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: 'rgba(165, 109, 255, 0.28)'
+    borderWidth: 1.5
+  },
+  audioButtonIdle: {
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    borderColor: 'rgba(99, 102, 241, 0.4)'
   },
   audioButtonPlaying: {
-    backgroundColor: 'rgba(165, 109, 255, 0.28)'
+    backgroundColor: 'rgba(236, 72, 153, 0.2)',
+    borderColor: '#EC4899'
+  },
+  audioIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(99, 102, 241, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12
+  },
+  audioIconPlaying: {
+    backgroundColor: 'rgba(236, 72, 153, 0.35)'
   },
   audioButtonEmoji: {
-    fontSize: 24,
-    marginRight: 10
+    fontSize: 22
+  },
+  audioContentWrap: {
+    flex: 1
   },
   audioButtonTitle: {
-    color: colors.text,
+    color: colors.white,
     fontSize: 14,
     fontWeight: '800',
     marginBottom: 2
   },
   audioButtonText: {
-    color: colors.textMuted,
+    color: '#D1D5DB',
     fontSize: 11,
-    lineHeight: 17
+    lineHeight: 16
   },
   noMediaContainer: {
-    minHeight: 150,
+    minHeight: 120,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderRadius: radii.xl,
     marginBottom: 14,
-    padding: 18
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)'
   },
   noMediaEmoji: {
     fontSize: 28,
-    marginBottom: 8
-  },
-  noMediaTitle: {
-    fontSize: 16,
-    color: colors.text,
-    fontWeight: '800',
-    textAlign: 'center',
     marginBottom: 6
   },
-  noMediaText: {
-    fontSize: 12,
-    color: colors.textMuted,
+  noMediaTitle: {
+    fontSize: 15,
+    color: colors.white,
+    fontWeight: '800',
     textAlign: 'center',
-    lineHeight: 18
+    marginBottom: 4
+  },
+  noMediaText: {
+    fontSize: 11.5,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 16
+  },
+  hintRequestButton: {
+    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radii.xl,
+    alignItems: 'center',
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(168, 85, 247, 0.45)'
+  },
+  hintRequestButtonDisabled: {
+    opacity: 0.6
+  },
+  hintRequestButtonText: {
+    color: '#E9D5FF',
+    fontSize: 13,
+    fontWeight: '800'
+  },
+  hintDisplayContainer: {
+    backgroundColor: 'rgba(168, 85, 247, 0.14)',
+    padding: 14,
+    borderRadius: radii.xl,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(168, 85, 247, 0.45)'
+  },
+  hintDisplayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6
+  },
+  hintDisplayEmoji: {
+    fontSize: 16,
+    marginRight: 6
+  },
+  hintDisplayLabel: {
+    color: '#C084FC',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.8
+  },
+  hintDisplayText: {
+    fontSize: 13.5,
+    color: colors.white,
+    lineHeight: 20,
+    fontWeight: '600'
   },
   answerSection: {
     marginTop: 2
   },
   answerLabel: {
-    fontSize: 14,
-    color: colors.textSoft,
+    fontSize: 13,
+    color: '#E5E7EB',
     marginBottom: 8,
-    fontWeight: '700'
+    fontWeight: '800'
   },
   input: {
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderRadius: radii.xl,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 16,
-    color: colors.text,
-    backgroundColor: colors.surfaceMuted,
-    marginBottom: 12
+    fontSize: 15,
+    color: colors.white,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    marginBottom: 12,
+    fontWeight: '600'
   },
   submitButton: {
     paddingVertical: 14,
-    borderRadius: radii.md,
+    borderRadius: radii.xl,
     alignItems: 'center',
-    ...shadows.soft
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4
   },
   submitButtonText: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: '800'
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.5
   },
   feedbackContainer: {
-    alignItems: 'center'
+    alignItems: 'center',
+    marginTop: 4
   },
   feedbackBadge: {
     width: '100%',
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 16,
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     alignItems: 'center',
-    marginBottom: 12
+    marginBottom: 12,
+    borderWidth: 1.5
   },
   correctBadge: {
-    backgroundColor: 'rgba(39, 214, 155, 0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(39, 214, 155, 0.32)'
+    backgroundColor: 'rgba(16, 185, 129, 0.18)',
+    borderColor: '#10B981'
   },
   wrongBadge: {
-    backgroundColor: 'rgba(255, 107, 122, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 107, 122, 0.3)'
+    backgroundColor: 'rgba(239, 68, 68, 0.18)',
+    borderColor: '#EF4444'
   },
   feedbackEmoji: {
-    fontSize: 30,
-    marginBottom: 6
+    fontSize: 32,
+    marginBottom: 4
   },
   feedbackText: {
     fontSize: 20,
-    fontWeight: '800',
-    color: colors.text,
+    fontWeight: '900',
+    color: colors.white,
     marginBottom: 4
   },
   feedbackSubtext: {
     fontSize: 12,
-    color: colors.textMuted,
+    color: '#D1D5DB',
     textAlign: 'center',
-    lineHeight: 18
+    lineHeight: 18,
+    fontWeight: '500'
   },
-  correctAnswer: {
+  correctAnswerCard: {
     width: '100%',
-    fontSize: 14,
-    color: colors.success,
-    fontWeight: '700',
-    marginBottom: 6,
-    textAlign: 'center'
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(245, 158, 11, 0.4)',
+    borderRadius: radii.lg,
+    padding: 10,
+    marginBottom: 10,
+    alignItems: 'center'
   },
-  yourAnswer: {
-    fontSize: 14,
-    color: colors.textMuted,
+  correctAnswerLabel: {
+    fontSize: 10,
+    color: '#FBBF24',
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    marginBottom: 2
+  },
+  correctAnswerText: {
+    fontSize: 15,
+    color: colors.white,
+    fontWeight: '900'
+  },
+  yourAnswerCard: {
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: radii.lg,
+    padding: 8,
     marginBottom: 14,
-    textAlign: 'center'
+    alignItems: 'center'
+  },
+  yourAnswerLabel: {
+    fontSize: 9,
+    color: '#9CA3AF',
+    fontWeight: '700',
+    marginBottom: 2
+  },
+  yourAnswerText: {
+    fontSize: 13,
+    color: '#E5E7EB',
+    fontWeight: '700'
   },
   nextButton: {
     width: '100%',
-    backgroundColor: colors.accentSecondary,
     paddingVertical: 14,
-    borderRadius: radii.md,
+    borderRadius: radii.xl,
     alignItems: 'center',
-    ...shadows.soft
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4
   },
   nextButtonText: {
-    color: colors.black,
-    fontSize: 16,
-    fontWeight: '800'
-  },
-  hintRequestButton: {
-    backgroundColor: 'rgba(255, 184, 77, 0.18)',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 184, 77, 0.28)'
-  },
-  hintRequestButtonDisabled: {
-    opacity: 0.7
-  },
-  hintRequestButtonText: {
     color: colors.white,
-    fontSize: 14,
-    fontWeight: '700'
-  },
-  hintDisplayContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255, 184, 77, 0.16)',
-    padding: 12,
-    borderRadius: radii.lg,
-    marginBottom: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 184, 77, 0.3)'
-  },
-  hintDisplayEmoji: {
-    fontSize: 18,
-    marginRight: 10
-  },
-  hintDisplayContent: {
-    flex: 1
-  },
-  hintDisplayLabel: {
-    color: colors.warning,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginBottom: 3
-  },
-  hintDisplayText: {
-    fontSize: 14,
-    color: colors.text,
-    lineHeight: 20
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.5
   }
 });

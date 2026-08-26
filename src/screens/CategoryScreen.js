@@ -9,9 +9,30 @@ import ScreenShell from '../components/ScreenShell';
 import { colors, radii, shadows } from '../theme/appTheme';
 
 const CATEGORIES = [
-  { id: 'vehicles', name: 'ยานพาหนะ', nameEn: 'Vehicles', color: '#FF7A59', emoji: '🚗', description: 'รูปภาพและเสียงเกี่ยวกับการเดินทางรอบตัว' },
-  { id: 'animals', name: 'สัตว์', nameEn: 'Animals', color: '#3CD3B2', emoji: '🐘', description: 'เดาคำศัพท์จากสัตว์ใกล้ตัวและสัตว์น่ารู้' },
-  { id: 'musical_instruments', name: 'เครื่องดนตรี', nameEn: 'Musical Instruments', color: '#A56DFF', emoji: '🎸', description: 'ฝึกทายชื่อเครื่องดนตรีจากสื่อผสม' },
+  { 
+    id: 'vehicles', 
+    name: 'ยานพาหนะ', 
+    nameEn: 'Vehicles & Transport', 
+    color: '#FF7A59', 
+    emoji: '🚗', 
+    description: 'ทดสอบความเร็วและสายตา กับรูปภาพและเสียงยานพาหนะรอบตัว' 
+  },
+  { 
+    id: 'animals', 
+    name: 'สัตว์โลกน่ารู้', 
+    nameEn: 'Animals & Wildlife', 
+    color: '#3CD3B2', 
+    emoji: '🐘', 
+    description: 'ผจญภัยในแดนสัตว์ป่าและสัตว์เลี้ยง ทายชื่อและเสียงสุดท้าทาย' 
+  },
+  { 
+    id: 'musical_instruments', 
+    name: 'เครื่องดนตรี', 
+    nameEn: 'Musical Instruments', 
+    color: '#A56DFF', 
+    emoji: '🎸', 
+    description: 'ฟังเสียงเมโลดี้และดูภาพเครื่องดนตรีสากลและพื้นบ้าน' 
+  },
 ];
 
 export default function CategoryScreen({ navigation }) {
@@ -20,48 +41,58 @@ export default function CategoryScreen({ navigation }) {
   };
 
   return (
-    <ScreenShell accentColor={colors.warning} secondaryAccentColor={colors.accentSecondary}>
+    <ScreenShell accentColor="#F59E0B" secondaryAccentColor="#6366F1">
+      {/* Epic Step Header */}
       <View style={styles.heroCard}>
-        <Text style={styles.eyebrow}>STEP 1 OF 2</Text>
-        <Text style={styles.title}>เลือกหมวดหมู่ที่ใช่สำหรับรอบนี้</Text>
-        <Text style={styles.subtitle}>แต่ละหมวดถูกออกแบบให้มีคาแรกเตอร์ต่างกัน ทั้งสี อารมณ์ และความรู้สึกในการเล่น</Text>
+        <View style={styles.heroGlowSheen} />
+        <View style={styles.badgeRow}>
+          <Text style={styles.eyebrow}>⚡ STEP 01 / 02 • CHOOSE ARENA</Text>
+        </View>
+        <Text style={styles.title}>เลือกหมวดหมู่คำถาม</Text>
+        <Text style={styles.subtitle}>เลือกสนามประลองที่คุณถนัดที่สุด แต่ละหมวดมีสื่อภาพและเสียงให้ลุ้น 10 ข้อ</Text>
       </View>
 
+      {/* Category Cards */}
       {CATEGORIES.map((category, index) => (
         <TouchableOpacity
           key={category.id}
-          style={[styles.categoryCard, { borderColor: `${category.color}55` }]}
+          style={[styles.categoryCard, { borderColor: `${category.color}66` }]}
           onPress={() => handleSelectCategory(category)}
-          activeOpacity={0.92}
+          activeOpacity={0.9}
         >
+          {/* Card Top Sheen */}
+          <View style={[styles.cardTopSheen, { backgroundColor: category.color }]} />
+
           <View style={styles.categoryTopRow}>
-            <View style={[styles.iconWrap, { backgroundColor: `${category.color}22` }]}>
+            <View style={[styles.iconWrap, { backgroundColor: `${category.color}25`, borderColor: category.color }]}>
               <Text style={styles.categoryEmoji}>{category.emoji}</Text>
             </View>
             <View style={styles.badgesRow}>
-              <View style={[styles.tag, { backgroundColor: `${category.color}22` }]}>
-                <Text style={[styles.tagText, { color: category.color }]}>หมวด {index + 1}</Text>
+              <View style={[styles.tag, { backgroundColor: `${category.color}20`, borderColor: `${category.color}50` }]}>
+                <Text style={[styles.tagText, { color: category.color }]}>หมวดที่ 0{index + 1}</Text>
               </View>
             </View>
           </View>
 
           <Text style={styles.categoryName}>{category.name}</Text>
-          <Text style={styles.categoryNameEn}>{category.nameEn}</Text>
-          <Text style={styles.categoryDescription}>{category.description}</Text>
+          <Text style={[styles.categoryNameEn, { color: category.color }]}>{category.nameEn.toUpperCase()}</Text>
 
           <View style={styles.cardFooter}>
             <Text style={styles.footerText}>แตะเพื่อเลือกระดับความยาก</Text>
-            <Text style={[styles.footerArrow, { color: category.color }]}>→</Text>
+            <View style={[styles.arrowCircle, { backgroundColor: `${category.color}25`, borderColor: category.color }]}>
+              <Text style={[styles.footerArrow, { color: category.color }]}>➔</Text>
+            </View>
           </View>
         </TouchableOpacity>
       ))}
 
+      {/* Back Action Button */}
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => navigation.goBack()}
-        activeOpacity={0.9}
+        activeOpacity={0.88}
       >
-        <Text style={styles.backButtonText}>กลับไปหน้าก่อนหน้า</Text>
+        <Text style={styles.backButtonText}>← ย้อนกลับหน้าหลัก</Text>
       </TouchableOpacity>
     </ScreenShell>
   );
@@ -71,39 +102,61 @@ const styles = StyleSheet.create({
   heroCard: {
     backgroundColor: colors.surfaceStrong,
     borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 18,
-    marginTop: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(245, 158, 11, 0.45)',
+    padding: 16,
+    marginTop: 6,
     marginBottom: 14,
+    overflow: 'hidden',
+    position: 'relative',
     ...shadows.card
   },
+  heroGlowSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(245, 158, 11, 0.75)'
+  },
+  badgeRow: {
+    marginBottom: 4
+  },
   eyebrow: {
-    color: colors.warning,
+    color: '#FBBF24',
     fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 6
+    fontWeight: '900',
+    letterSpacing: 0.8
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.text,
-    lineHeight: 30,
-    marginBottom: 8
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.white,
+    marginBottom: 4
   },
   subtitle: {
-    fontSize: 13,
-    color: colors.textMuted,
-    lineHeight: 20
+    fontSize: 12,
+    color: '#D1D5DB',
+    lineHeight: 18,
+    fontWeight: '500'
   },
   categoryCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceStrong,
     borderRadius: radii.xl,
-    borderWidth: 1,
-    padding: 14,
+    borderWidth: 1.5,
+    padding: 16,
     marginBottom: 12,
-    ...shadows.soft
+    overflow: 'hidden',
+    position: 'relative',
+    ...shadows.card
+  },
+  cardTopSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    opacity: 0.8
   },
   categoryTopRow: {
     flexDirection: 'row',
@@ -112,74 +165,87 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   iconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    borderWidth: 1.5
   },
   badgesRow: {
     flexDirection: 'row'
   },
   tag: {
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: radii.pill
+    paddingVertical: 5,
+    borderRadius: radii.pill,
+    borderWidth: 1
   },
   tagText: {
-    fontSize: 11,
-    fontWeight: '800'
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5
   },
   categoryEmoji: {
-    fontSize: 22
+    fontSize: 24
   },
   categoryName: {
     fontSize: 20,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 4
+    fontWeight: '900',
+    color: colors.white,
+    marginBottom: 2
   },
   categoryNameEn: {
-    fontSize: 11,
-    color: colors.accentSecondary,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.8,
     marginBottom: 8
   },
   categoryDescription: {
     fontSize: 12,
-    color: colors.textMuted,
-    lineHeight: 18
+    color: '#9CA3AF',
+    lineHeight: 18,
+    fontWeight: '500'
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
-    paddingTop: 10,
+    marginTop: 14,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.border
+    borderTopColor: 'rgba(255, 255, 255, 0.08)'
   },
   footerText: {
-    color: colors.textSoft,
+    color: '#D1D5DB',
     fontSize: 12,
-    fontWeight: '600'
+    fontWeight: '700'
+  },
+  arrowCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1
   },
   footerArrow: {
-    fontSize: 22,
-    fontWeight: '800'
+    fontSize: 14,
+    fontWeight: '900'
   },
   backButton: {
-    marginTop: 4,
-    paddingVertical: 13,
-    backgroundColor: colors.surfaceStrong,
-    borderRadius: radii.md,
+    marginTop: 6,
+    marginBottom: 10,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: radii.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.borderStrong
+    borderColor: 'rgba(255, 255, 255, 0.12)'
   },
   backButtonText: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '700'
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '800'
   },
 });

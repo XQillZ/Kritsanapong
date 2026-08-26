@@ -1,13 +1,17 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// TODO: ใส่ API Key ของ Gemini
-const GEMINI_API_KEY = 'AIzaSyDgVspgPOchrffe97DiUQc0QHRNo0QerQ8';
-
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// ดึง API Key จากไฟล์ .env (ผ่านตัวแปร EXPO_PUBLIC_)
+const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 
 export const getHintFromGemini = async (category, questionText, answer) => {
+  if (!GEMINI_API_KEY) {
+    console.warn("Gemini API Key is missing in .env");
+    return "กรุณาใส่ EXPO_PUBLIC_GEMINI_API_KEY ในไฟล์ .env ก่อนใช้งานคำใบ้ AI";
+  }
+
   try {
-    const model = genAI.getGenerativeModel({ model:"gemini-2.5-flash" });
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
     
     const prompt = `คุณคือ AI ผู้ช่วยในเกมทายคำ
 หมวดหมู่ของคำถาม: ${category}

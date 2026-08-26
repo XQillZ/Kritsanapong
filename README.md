@@ -39,7 +39,20 @@ Mobile Application เกมทายภาพที่พัฒนาด้ว�
 npm install
 ```
 
-### 2. ตั้งค่า Firebase
+### 2. ตั้งค่า Environment Variables (.env)
+
+คัดลอกไฟล์ `.env.example` เป็น `.env` และใส่ Gemini API Key ของคุณ:
+
+```bash
+cp .env.example .env
+```
+
+แก้ไขไฟล์ `.env`:
+```env
+EXPO_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+### 3. ตั้งค่า Firebase
 
 1. สร้างโปรเจกต์ใน [Firebase Console](https://console.firebase.google.com/)
 2. เพิ่มแอป Android/iOS และดึงค่า Configuration
@@ -56,7 +69,7 @@ const firebaseConfig = {
 };
 ```
 
-### 3. สร้าง Firestore Database
+### 4. สร้าง Firestore Database
 
 สร้าง Collection ชื่อ `questions` ด้วย document structure:
 
@@ -70,7 +83,7 @@ const firebaseConfig = {
 }
 ```
 
-### 4. ตั้งค่า Firebase Storage Rules
+### 5. ตั้งค่า Firebase Storage Rules
 
 ```
 service firebase.storage {
@@ -83,7 +96,7 @@ service firebase.storage {
 }
 ```
 
-### 5. ตั้งค่า Firestore Rules
+### 6. ตั้งค่า Firestore Rules
 
 ```
 rules_version = '2';
@@ -97,7 +110,7 @@ service cloud.firestore {
 }
 ```
 
-### 6. สร้าง Admin Account
+### 7. สร้าง Admin Account
 
 1. ไปที่ Firebase Console → Authentication
 2. เพิ่มผู้ใช้ด้วย email/password

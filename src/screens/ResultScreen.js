@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import { Audio } from 'expo-av';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import ScreenShell from '../components/ScreenShell';
 import { auth, db } from '../services/firebase';
@@ -15,7 +17,49 @@ export default function ResultScreen({ navigation, route }) {
   const { score, total, answeredQuestions, category, difficulty } = route.params;
   const wrongCount = total - score;
   const percentage = Math.round((score / total) * 100);
-  
+
+  const [sound, setSound] = useState(null);
+  const [playingAudioIndex, setPlayingAudioIndex] = useState(null);
+
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
+
+  const playAudio = async (audioUrl, index) => {
+    try {
+      if (sound) {
+        await sound.unloadAsync();
+        setSound(null);
+      }
+
+      if (playingAudioIndex === index) {
+        setPlayingAudioIndex(null);
+        return;
+      }
+
+      setPlayingAudioIndex(index);
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: audioUrl },
+        { shouldPlay: true }
+      );
+
+      setSound(newSound);
+
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setPlayingAudioIndex(null);
+        }
+      });
+    } catch (error) {
+      console.error('Error playing audio in result screen:', error);
+      setPlayingAudioIndex(null);
+    }
+  };
+
   // คำนวณคะแนนใหม่โดยคำนึงถึงการใช้คำใบ้
   let finalScore = 0;
 
@@ -35,12 +79,12 @@ export default function ResultScreen({ navigation, route }) {
       if (auth.currentUser && finalScore > 0) {
         try {
           const userRef = doc(db, 'users', auth.currentUser.uid);
-          
+
           // กำหนดฟิลด์คะแนนแยกตามหมวดหมู่และระดับความยาก
           const categoryScoreField = `scores.${category.id}`;
           const difficultyScoreField = `scores.${difficulty}`;
           const combinedScoreField = `scores.${category.id}_${difficulty}`;
-          
+
           await updateDoc(userRef, {
             totalScore: increment(finalScore),
             [categoryScoreField]: increment(finalScore),
@@ -53,7 +97,7 @@ export default function ResultScreen({ navigation, route }) {
         }
       }
     };
-    
+
     saveScore();
   }, []);
 
@@ -70,97 +114,175 @@ export default function ResultScreen({ navigation, route }) {
 
   return (
     <ScreenShell accentColor={category.color} secondaryAccentColor={difficultyInfo?.accent || colors.accentSecondary}>
+      {/* Victory Celebration Card */}
       <View style={styles.heroCard}>
+        <View style={styles.heroGlowSheen} />
+        <View style={styles.badgeRow}>
+          <Text style={styles.heroBadgeText}>⚡ MATCH PERFORMANCE SUMMARY</Text>
+        </View>
         <Text style={styles.emoji}>{message.emoji}</Text>
         <Text style={[styles.message, { color: message.color }]}>{message.text}</Text>
-        <Text style={styles.heroSubtitle}>สรุปผลการเล่นของหมวด {category.name} ในระดับ {difficulty}</Text>
+        <Text style={styles.heroSubtitle}>
+          หมวดหมู่ {category.name} • ระดับ {difficulty === 'hard' ? 'โหมดยาก 🔥' : 'โหมดง่าย 🌱'}
+        </Text>
       </View>
 
+      {/* 3D Combat Score Terminal */}
       <View style={styles.scoreCard}>
+        <View style={styles.scoreCardSheen} />
+
         <View style={styles.scoreMain}>
-          <Text style={styles.scoreTitle}>คะแนนการตอบถูก</Text>
+          <Text style={styles.scoreTitle}>ความแม่นยำในการตอบคำถาม</Text>
           <View style={styles.scoreCircle}>
             <Text style={styles.scoreNumber}>{score}</Text>
             <Text style={styles.scoreTotal}>/{total}</Text>
           </View>
-          <Text style={styles.percentage}>{percentage}% Accuracy</Text>
+          <View style={styles.percentageBadge}>
+            <Text style={styles.percentage}>{percentage}% ACCURACY</Text>
+          </View>
         </View>
 
         <View style={styles.finalScoreContainer}>
-          <Text style={styles.finalScoreLabel}>คะแนนที่ได้รับ</Text>
-          <Text style={styles.finalScoreText}>+{finalScore}</Text>
+          <Text style={styles.finalScoreLabel}>⭐ คะแนนรวมที่ได้รับในรอบนี้</Text>
+          <View style={styles.finalScorePill}>
+            <Text style={styles.finalScoreText}>+{finalScore} PTS</Text>
+          </View>
           {difficulty === 'hard' && (
-            <Text style={styles.bonusText}>โหมดยากตอบถูกได้ 2 คะแนน และหากใช้คำใบ้จะเหลือ 1 คะแนน</Text>
+            <Text style={styles.bonusText}>
+              โหมดยาก: ข้อที่ตอบถูกโดยไม่ใช้คำใบ้ได้รับ 2 คะแนน / ใช้คำใบ้ได้รับ 1 คะแนน
+            </Text>
           )}
         </View>
       </View>
 
+      {/* 3 Sci-Fi Mini Pods */}
       <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: 'rgba(39, 214, 155, 0.15)' }]}>
-          <Text style={styles.statValue}>{score}</Text>
+        <View style={[styles.statCard, styles.statCardCorrect]}>
+          <Text style={styles.statEmoji}>✅</Text>
+          <Text style={[styles.statValue, { color: '#34D399' }]}>{score}</Text>
           <Text style={styles.statLabel}>ตอบถูก</Text>
         </View>
-        <View style={[styles.statCard, { backgroundColor: 'rgba(255, 107, 122, 0.15)' }]}>
-          <Text style={styles.statValue}>{wrongCount}</Text>
+        <View style={[styles.statCard, styles.statCardWrong]}>
+          <Text style={styles.statEmoji}>❌</Text>
+          <Text style={[styles.statValue, { color: '#F87171' }]}>{wrongCount}</Text>
           <Text style={styles.statLabel}>ตอบผิด</Text>
         </View>
-        <View style={[styles.statCard, { backgroundColor: 'rgba(32, 211, 255, 0.15)' }]}>
-          <Text style={styles.statValue}>{answeredQuestions.filter((item) => item.usedHint).length}</Text>
+        <View style={[styles.statCard, styles.statCardHint]}>
+          <Text style={styles.statEmoji}>🤖</Text>
+          <Text style={[styles.statValue, { color: '#C084FC' }]}>{answeredQuestions.filter((item) => item.usedHint).length}</Text>
           <Text style={styles.statLabel}>ใช้คำใบ้</Text>
         </View>
       </View>
 
+      {/* Question Review Section */}
       <View style={styles.reviewSection}>
-        <Text style={styles.reviewTitle}>Review ทุกข้อ</Text>
-        <Text style={styles.reviewSubtitle}>ตรวจคำตอบย้อนหลังและดูจุดที่ตอบถูกหรือพลาดในแต่ละข้อ</Text>
+        <View style={styles.reviewHeaderTitleRow}>
+          <Text style={styles.reviewSectionTag}>🔍 DETAILED BREAKDOWN</Text>
+          <Text style={styles.reviewTitle}>ตรวจทานคำตอบทั้งหมด 10 ข้อ</Text>
+          <Text style={styles.reviewSubtitle}>ดูภาพ เสียง และคำตอบที่ถูกต้องเพื่อพัฒนาฝีมือ</Text>
+        </View>
+
         {answeredQuestions.map((item, index) => {
           const answerDisplay = item.question.answerEn
             ? `${item.question.answer} / ${item.question.answerEn}`
             : item.question.answer;
           const reviewPrompt = getQuestionPrompt(item.question, category.name);
+          const hasImage = !!item.question.imageUrl && (item.question.displayMediaMode === 'image' || item.question.displayMediaMode !== 'audio');
+          const hasAudio = !!item.question.audioUrl && (item.question.displayMediaMode === 'audio' || item.question.displayMediaMode !== 'image');
 
           return (
-            <View key={index} style={styles.reviewItem}>
+            <View 
+              key={index} 
+              style={[
+                styles.reviewItem, 
+                item.correct ? styles.reviewItemCorrect : styles.reviewItemWrong
+              ]}
+            >
               <View style={styles.reviewHeader}>
                 <View style={styles.reviewHeaderLeft}>
-                  <Text style={styles.reviewNumber}>ข้อ {index + 1}</Text>
-                  {item.usedHint && <Text style={styles.usedHintBadge}>ใช้คำใบ้</Text>}
+                  <View style={styles.reviewNumberBadge}>
+                    <Text style={styles.reviewNumberText}>ข้อที่ 0{index + 1}</Text>
+                  </View>
+                  {item.usedHint && (
+                    <View style={styles.usedHintBadge}>
+                      <Text style={styles.usedHintBadgeText}>🤖 ใช้ AI คำใบ้</Text>
+                    </View>
+                  )}
                 </View>
                 <View style={[styles.reviewResultPill, item.correct ? styles.reviewResultCorrect : styles.reviewResultWrong]}>
-                  <Text style={styles.reviewResultText}>{item.correct ? 'ถูก' : 'ผิด'}</Text>
+                  <Text style={[styles.reviewResultText, { color: item.correct ? '#34D399' : '#F87171' }]}>
+                    {item.correct ? '✓ ถูกต้อง' : '✗ ตอบผิด'}
+                  </Text>
                 </View>
               </View>
+
+              {hasImage && (
+                <View style={styles.reviewMediaWrap}>
+                  <Image
+                    source={{ uri: item.question.imageUrl }}
+                    style={styles.reviewImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
+
+              {hasAudio && (
+                <View style={styles.reviewMediaWrap}>
+                  <TouchableOpacity
+                    style={[styles.reviewAudioBtn, playingAudioIndex === index && styles.reviewAudioBtnPlaying]}
+                    onPress={() => playAudio(item.question.audioUrl, index)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.reviewAudioEmoji}>{playingAudioIndex === index ? '🔊' : '🎧'}</Text>
+                    <Text style={styles.reviewAudioText}>
+                      {playingAudioIndex === index ? 'กำลังเล่นเสียงคำถาม...' : 'แตะเพื่อฟังเสียงคำถามในข้อนี้'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
               <Text style={styles.reviewPrompt}>{reviewPrompt}</Text>
-              <Text style={styles.reviewAnswer}>คำตอบที่ถูก: {answerDisplay}</Text>
-              <Text style={styles.reviewUserAnswer}>คำตอบของคุณ: {item.userAnswer || '-'}</Text>
+
+              <View style={styles.reviewAnswerCard}>
+                <Text style={styles.reviewAnswerLabel}>💡 คำตอบที่ถูกต้อง:</Text>
+                <Text style={styles.reviewAnswerText}>{answerDisplay}</Text>
+              </View>
+
+              <View style={styles.reviewUserCard}>
+                <Text style={styles.reviewUserLabel}>คำตอบของคุณ:</Text>
+                <Text style={[styles.reviewUserText, { color: item.correct ? '#34D399' : '#F87171' }]}>
+                  {item.userAnswer || '(ไม่ได้กรอกคำตอบ)'}
+                </Text>
+              </View>
             </View>
           );
         })}
       </View>
 
+      {/* Action Buttons */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.primaryButton, { backgroundColor: category.color }]}
           onPress={() => navigation.navigate('Game', { category, difficulty })}
-          activeOpacity={0.92}
+          activeOpacity={0.9}
         >
-          <Text style={styles.primaryButtonText}>เล่นอีกครั้ง</Text>
+          <Text style={styles.primaryButtonText}>🔁 เล่นอีกครั้งในหมวดนี้</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Difficulty', { category })}
-          activeOpacity={0.92}
+          onPress={() => navigation.navigate('Leaderboard')}
+          activeOpacity={0.9}
         >
-          <Text style={styles.secondaryButtonText}>เปลี่ยนความยาก</Text>
+          <Text style={styles.secondaryButtonText}>🏆 ดูตารางอันดับ (Leaderboard)</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.ghostButton}
           onPress={() => navigation.navigate('Home')}
-          activeOpacity={0.92}
+          activeOpacity={0.88}
         >
-          <Text style={styles.ghostButtonText}>กลับหน้าหลัก</Text>
+          <Text style={styles.ghostButtonText}>🏠 กลับหน้าหลัก</Text>
         </TouchableOpacity>
       </View>
     </ScreenShell>
@@ -171,229 +293,403 @@ const styles = StyleSheet.create({
   heroCard: {
     backgroundColor: colors.surfaceStrong,
     borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 1.5,
+    borderColor: 'rgba(251, 191, 36, 0.45)',
     padding: 18,
-    marginTop: 8,
-    marginBottom: 14,
+    marginTop: 6,
+    marginBottom: 12,
     alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
     ...shadows.card
   },
-  emoji: {
-    fontSize: 44,
-    marginBottom: 6,
+  heroGlowSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(251, 191, 36, 0.8)'
   },
-  message: {
-    fontSize: 22,
-    fontWeight: '800',
+  badgeRow: {
     marginBottom: 6
   },
+  heroBadgeText: {
+    color: '#FBBF24',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.8
+  },
+  emoji: {
+    fontSize: 48,
+    marginBottom: 4
+  },
+  message: {
+    fontSize: 24,
+    fontWeight: '900',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4
+  },
   heroSubtitle: {
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center'
+    color: '#D1D5DB',
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    fontWeight: '500'
   },
   scoreCard: {
     backgroundColor: colors.surfaceStrong,
     borderRadius: radii.xl,
     padding: 18,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+    position: 'relative',
     ...shadows.card
+  },
+  scoreCardSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)'
   },
   scoreMain: {
     alignItems: 'center'
   },
   scoreTitle: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginBottom: 12,
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '700',
+    marginBottom: 8
   },
   scoreCircle: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'baseline'
   },
   scoreNumber: {
-    fontSize: 56,
-    fontWeight: '800',
-    color: colors.text,
+    fontSize: 54,
+    fontWeight: '900',
+    color: colors.white
   },
   scoreTotal: {
-    fontSize: 28,
-    color: colors.textMuted,
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#9CA3AF'
+  },
+  percentageBadge: {
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.4)',
+    marginTop: 4
   },
   percentage: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.accentSecondary,
-    marginTop: 6,
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#A5B4FC',
+    letterSpacing: 0.5
   },
   finalScoreContainer: {
-    marginTop: 16,
+    marginTop: 14,
     alignItems: 'center',
-    paddingTop: 14,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    width: '100%',
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    width: '100%'
   },
   finalScoreLabel: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginBottom: 4,
+    fontSize: 12,
+    color: '#D1D5DB',
+    marginBottom: 6,
     fontWeight: '700'
   },
-  bonusText: {
-    fontSize: 12,
-    color: colors.warning,
-    fontWeight: '600',
-    marginTop: 6,
-    textAlign: 'center',
-    lineHeight: 18
+  finalScorePill: {
+    backgroundColor: 'rgba(245, 158, 11, 0.18)',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    borderWidth: 1.5,
+    borderColor: '#FBBF24'
   },
   finalScoreText: {
-    fontSize: 26,
-    color: colors.success,
-    fontWeight: '800',
+    fontSize: 22,
+    color: '#FBBF24',
+    fontWeight: '900'
+  },
+  bonusText: {
+    fontSize: 11,
+    color: '#FDE68A',
+    fontWeight: '500',
+    marginTop: 6,
+    textAlign: 'center',
+    lineHeight: 16
   },
   statsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 18,
+    marginBottom: 14
   },
   statCard: {
     flex: 1,
-    borderRadius: radii.lg,
-    padding: 14,
+    borderRadius: radii.xl,
+    padding: 12,
     alignItems: 'center',
+    borderWidth: 1
+  },
+  statCardCorrect: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.35)'
+  },
+  statCardWrong: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: 'rgba(239, 68, 68, 0.35)'
+  },
+  statCardHint: {
+    backgroundColor: 'rgba(168, 85, 247, 0.12)',
+    borderColor: 'rgba(168, 85, 247, 0.35)'
+  },
+  statEmoji: {
+    fontSize: 16,
+    marginBottom: 2
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.text,
+    fontSize: 20,
+    fontWeight: '900'
   },
   statLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 4,
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginTop: 2,
+    fontWeight: '700'
   },
   reviewSection: {
     backgroundColor: colors.surfaceStrong,
     borderRadius: radii.xl,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     ...shadows.card
+  },
+  reviewHeaderTitleRow: {
+    marginBottom: 12
+  },
+  reviewSectionTag: {
+    color: '#818CF8',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    marginBottom: 2
   },
   reviewTitle: {
     fontSize: 18,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 4,
+    fontWeight: '900',
+    color: colors.white,
+    marginBottom: 2
   },
   reviewSubtitle: {
-    color: colors.textMuted,
+    color: '#9CA3AF',
     fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 12
+    lineHeight: 16,
+    fontWeight: '500'
   },
   reviewItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingVertical: 10,
+    borderRadius: radii.xl,
+    borderWidth: 1.5,
+    padding: 12,
+    marginBottom: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)'
+  },
+  reviewItemCorrect: {
+    borderColor: 'rgba(16, 185, 129, 0.3)'
+  },
+  reviewItemWrong: {
+    borderColor: 'rgba(239, 68, 68, 0.3)'
   },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8
   },
   reviewHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6
   },
-  usedHintBadge: {
-    fontSize: 11,
-    backgroundColor: 'rgba(255, 184, 77, 0.18)',
-    color: colors.warning,
+  reviewNumberBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: radii.pill,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)'
   },
-  reviewNumber: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
+  reviewNumberText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.white
+  },
+  usedHintBadge: {
+    backgroundColor: 'rgba(168, 85, 247, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(168, 85, 247, 0.4)'
+  },
+  usedHintBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#C084FC'
   },
   reviewResultPill: {
     borderRadius: radii.pill,
     paddingHorizontal: 10,
-    paddingVertical: 5
+    paddingVertical: 4,
+    borderWidth: 1
   },
   reviewResultCorrect: {
-    backgroundColor: 'rgba(39, 214, 155, 0.18)'
+    backgroundColor: 'rgba(16, 185, 129, 0.18)',
+    borderColor: '#10B981'
   },
   reviewResultWrong: {
-    backgroundColor: 'rgba(255, 107, 122, 0.16)'
+    backgroundColor: 'rgba(239, 68, 68, 0.18)',
+    borderColor: '#EF4444'
   },
   reviewResultText: {
     fontSize: 11,
-    fontWeight: '800',
-    color: colors.text
+    fontWeight: '900'
+  },
+  reviewMediaWrap: {
+    marginTop: 4,
+    marginBottom: 8,
+    borderRadius: radii.lg,
+    overflow: 'hidden'
+  },
+  reviewImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: radii.lg,
+    backgroundColor: '#05021a'
+  },
+  reviewAudioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(99, 102, 241, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.4)',
+    borderRadius: radii.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8
+  },
+  reviewAudioBtnPlaying: {
+    backgroundColor: 'rgba(236, 72, 153, 0.25)',
+    borderColor: '#EC4899'
+  },
+  reviewAudioEmoji: {
+    fontSize: 18
+  },
+  reviewAudioText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '800'
   },
   reviewPrompt: {
     fontSize: 13,
-    color: colors.textSoft,
-    lineHeight: 19,
-    marginBottom: 4
+    color: '#E5E7EB',
+    lineHeight: 18,
+    fontWeight: '700',
+    marginBottom: 8
   },
-  reviewAnswer: {
-    fontSize: 13,
-    color: colors.success,
+  reviewAnswerCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    padding: 8,
+    borderRadius: radii.md,
     marginBottom: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)'
   },
-  reviewUserAnswer: {
+  reviewAnswerLabel: {
+    fontSize: 9,
+    color: '#FBBF24',
+    fontWeight: '800',
+    marginBottom: 1
+  },
+  reviewAnswerText: {
     fontSize: 13,
-    color: colors.textMuted,
+    color: colors.white,
+    fontWeight: '800'
+  },
+  reviewUserCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    padding: 8,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)'
+  },
+  reviewUserLabel: {
+    fontSize: 9,
+    color: '#9CA3AF',
+    fontWeight: '700',
+    marginBottom: 1
+  },
+  reviewUserText: {
+    fontSize: 13,
+    fontWeight: '800'
   },
   buttonContainer: {
     gap: 10,
+    marginBottom: 16
   },
   primaryButton: {
     paddingVertical: 14,
-    borderRadius: radii.md,
+    borderRadius: radii.xl,
     alignItems: 'center',
-    ...shadows.soft
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4
   },
   primaryButtonText: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.5
   },
   secondaryButton: {
     paddingVertical: 14,
-    borderRadius: radii.md,
+    borderRadius: radii.xl,
     alignItems: 'center',
-    backgroundColor: colors.surfaceStrong,
-    borderWidth: 1,
-    borderColor: colors.borderStrong
+    backgroundColor: 'rgba(245, 158, 11, 0.18)',
+    borderWidth: 1.5,
+    borderColor: '#FBBF24'
   },
   secondaryButtonText: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '700'
+    color: '#FBBF24',
+    fontSize: 14,
+    fontWeight: '900'
   },
   ghostButton: {
-    paddingVertical: 12,
-    alignItems: 'center'
+    paddingVertical: 13,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)'
   },
   ghostButtonText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    fontWeight: '700'
-  },
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '800'
+  }
 });

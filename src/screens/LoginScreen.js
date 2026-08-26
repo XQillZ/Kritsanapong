@@ -55,6 +55,7 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
+      auth.languageCode = 'th';
       await sendPasswordResetEmail(auth, email);
       Alert.alert('ส่งอีเมลสำเร็จ', 'ลิงก์สำหรับรีเซ็ตรหัสผ่านถูกส่งไปยังอีเมลของคุณแล้ว กรุณาตรวจสอบกล่องข้อความ (หรือ Junk Mail)');
     } catch (error) {
