@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // อนุญาตให้อ่านและเขียนข้อมูลคำถามและผู้เล่น
+    match /questions/{questionId} {
+      allow read, write: if true;
+    }
+
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // fallback สำหรับเอกสารอื่นๆ
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

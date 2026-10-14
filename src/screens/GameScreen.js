@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -36,6 +36,7 @@ export default function GameScreen({ navigation, route }) {
   const [imageLoading, setImageLoading] = useState(true);
   const [sound, setSound] = useState();
   const [isPlaying, setIsPlaying] = useState(false);
+  const soundRef = useRef(null);
   const [hint, setHint] = useState('');
   const [isHintLoading, setIsHintLoading] = useState(false);
   const [usedHint, setUsedHint] = useState(false);
@@ -45,8 +46,8 @@ export default function GameScreen({ navigation, route }) {
     
     // Cleanup sound when component unmounts
     return () => {
-      if (sound) {
-        sound.unloadAsync();
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
       }
     };
   }, []);
@@ -106,12 +107,24 @@ export default function GameScreen({ navigation, route }) {
     ? `${currentQuestion.answer} หรือ ${currentQuestion.answerEn}`
     : currentQuestion.answer;
 
-  const playAudio = async () => {
+  const toggleAudio = async () => {
     if (!currentQuestion.audioUrl) return;
 
     try {
-      if (sound) {
-        await sound.unloadAsync();
+      // 1. ถ้ากำลังเล่นอยู่ ให้หยุดเสียงทันที
+      if (isPlaying && soundRef.current) {
+        await soundRef.current.stopAsync().catch(() => {});
+        await soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current = null;
+        setSound(null);
+        setIsPlaying(false);
+        return;
+      }
+
+      // 2. ถ้ามีเสียงเดิม ให้ unload ก่อน
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current = null;
       }
 
       setIsPlaying(true);
@@ -120,6 +133,7 @@ export default function GameScreen({ navigation, route }) {
         { shouldPlay: true }
       );
       
+      soundRef.current = newSound;
       setSound(newSound);
 
       newSound.setOnPlaybackStatusUpdate((status) => {
@@ -128,7 +142,7 @@ export default function GameScreen({ navigation, route }) {
         }
       });
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error('Error toggling audio:', error);
       Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเล่นเสียงได้');
       setIsPlaying(false);
     }
@@ -172,6 +186,12 @@ export default function GameScreen({ navigation, route }) {
       }
     ]);
 
+    // หยุดเสียงทันทีเมื่อผู้เล่นส่งคำตอบ
+    if (soundRef.current) {
+      soundRef.current.stopAsync().catch(() => {});
+    }
+    setIsPlaying(false);
+
     setShowingFeedback(true);
   };
 
@@ -183,10 +203,11 @@ export default function GameScreen({ navigation, route }) {
     setIsHintLoading(false);
     setUsedHint(false);
     
-    if (sound) {
-      sound.unloadAsync();
-      setSound(null);
+    if (soundRef.current) {
+      soundRef.current.unloadAsync().catch(() => {});
+      soundRef.current = null;
     }
+    setSound(null);
     setIsPlaying(false);
     
     if (currentIndex + 1 < questions.length) {
@@ -301,19 +322,18 @@ export default function GameScreen({ navigation, route }) {
                   styles.audioButton, 
                   isPlaying ? styles.audioButtonPlaying : styles.audioButtonIdle
                 ]}
-                onPress={playAudio}
-                disabled={isPlaying}
+                onPress={toggleAudio}
                 activeOpacity={0.88}
               >
                 <View style={[styles.audioIconCircle, isPlaying && styles.audioIconPlaying]}>
-                  <Text style={styles.audioButtonEmoji}>{isPlaying ? '🔊' : '🎧'}</Text>
+                  <Text style={styles.audioButtonEmoji}>{isPlaying ? '⏹️' : '🔊'}</Text>
                 </View>
                 <View style={styles.audioContentWrap}>
                   <Text style={styles.audioButtonTitle}>
-                    {isPlaying ? 'กำลังเล่นไฟล์เสียง...' : 'แตะเพื่อฟังเสียงคำถาม'}
+                    {isPlaying ? 'กำลังเล่นเสียง... (แตะเพื่อหยุด)' : 'แตะเพื่อฟังเสียงคำถาม'}
                   </Text>
                   <Text style={styles.audioButtonText}>
-                    {isPlaying ? 'ฟังเสียงให้ละเอียดแล้วพิมพ์คำตอบ' : 'คำถามนี้อ้างอิงจากเสียงปริศนา'}
+                    {isPlaying ? 'แตะปุ่มนี้อีกครั้งเพื่อหยุดเล่นทันที' : 'คำถามนี้อ้างอิงจากเสียงปริศนา'}
                   </Text>
                 </View>
               </TouchableOpacity>

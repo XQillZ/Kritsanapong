@@ -11,6 +11,7 @@ import {
   View
 } from 'react-native';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenShell from '../components/ScreenShell';
 import { auth } from '../services/firebase';
 import { colors, radii, shadows } from '../theme/appTheme';
@@ -21,14 +22,36 @@ export default function LoginScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedEmail || !trimmedPassword) {
       Alert.alert('ข้อผิดพลาด', 'กรุณากรอกอีเมลและรหัสผ่าน');
       return;
     }
 
     setLoading(true);
+
+    // 1. Check for Admin credentials (admin / admin)
+    if (trimmedEmail.toLowerCase() === 'admin' && trimmedPassword === 'admin') {
+      try {
+        await AsyncStorage.setItem('isAdmin', 'true');
+        Alert.alert('สำเร็จ', 'เข้าสู่ระบบในฐานะผู้ดูแลระบบ (Admin)', [
+          { text: 'ตกลง', onPress: () => navigation.replace('Admin') }
+        ]);
+      } catch (e) {
+        console.error('Error saving admin status:', e);
+        Alert.alert('ข้อผิดพลาด', 'ไม่สามารถบันทึกสถานะผู้ดูแลระบบได้');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // 2. Regular Firebase Auth Login
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await AsyncStorage.removeItem('isAdmin');
+      await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
       Alert.alert('สำเร็จ', 'เข้าสู่ระบบเรียบร้อย', [
         { text: 'ตกลง', onPress: () => navigation.replace('Home') }
       ]);

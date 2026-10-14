@@ -17,6 +17,7 @@ import DifficultyScreen from './screens/DifficultyScreen';
 import GameScreen from './screens/GameScreen';
 import ResultScreen from './screens/ResultScreen';
 import LeaderboardScreen from './screens/LeaderboardScreen';
+import AdminScreen from './screens/AdminScreen';
 
 const Stack = createNativeStackNavigator();
 const navigationTheme = {
@@ -105,6 +106,11 @@ export default function App() {
           <Stack.Screen 
             name="Leaderboard" 
             component={LeaderboardScreen}
+          />
+          {/* 8. Admin */}
+          <Stack.Screen 
+            name="Admin" 
+            component={AdminScreen}
           />
         </Stack.Navigator>
       </NavigationContainer>

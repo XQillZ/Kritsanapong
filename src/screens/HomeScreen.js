@@ -14,12 +14,14 @@ import {
 } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenShell from '../components/ScreenShell';
 import { auth, db } from '../services/firebase';
 import { colors, radii, shadows } from '../theme/appTheme';
 
 export default function HomeScreen({ navigation }) {
   const [username, setUsername] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [userStats, setUserStats] = useState({
     totalScore: 0,
@@ -162,7 +164,21 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  const checkAdminStatus = async () => {
+    try {
+      const val = await AsyncStorage.getItem('isAdmin');
+      const adminActive = val === 'true';
+      setIsAdmin(adminActive);
+      if (adminActive) {
+        setUsername('Admin');
+      }
+    } catch (e) {
+      console.error('Error reading admin status:', e);
+    }
+  };
+
   useEffect(() => {
+    checkAdminStatus();
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
       if (user) {
         fetchUserData();
@@ -173,6 +189,7 @@ export default function HomeScreen({ navigation }) {
     });
 
     const unsubscribeFocus = navigation.addListener('focus', () => {
+      checkAdminStatus();
       fetchUserData();
     });
 
@@ -197,6 +214,8 @@ export default function HomeScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
+              await AsyncStorage.removeItem('isAdmin');
+              setIsAdmin(false);
               await signOut(auth);
               navigation.replace('Login');
             } catch (error) {
@@ -213,18 +232,33 @@ export default function HomeScreen({ navigation }) {
       {/* Epic Top Profile HUD */}
       <View style={styles.topBar}>
         <View style={styles.identityCard}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarEmoji}>{auth.currentUser ? '🧙‍♂️' : '👤'}</Text>
+          <View style={[styles.avatarCircle, isAdmin && styles.adminAvatarCircle]}>
+            <Text style={styles.avatarEmoji}>{isAdmin ? '👑' : auth.currentUser ? '🧙‍♂️' : '👤'}</Text>
           </View>
           <View style={styles.identityTextWrap}>
             <View style={styles.statusRow}>
-              <View style={styles.onlineDot} />
-              <Text style={styles.identityLabel}>{auth.currentUser ? 'ONLINE PLAYER' : 'GUEST MODE'}</Text>
+              <View style={[styles.onlineDot, isAdmin && { backgroundColor: '#FBBF24' }]} />
+              <Text style={[styles.identityLabel, isAdmin && { color: '#FBBF24' }]}>
+                {isAdmin ? 'ADMINISTRATOR' : auth.currentUser ? 'ONLINE PLAYER' : 'GUEST MODE'}
+              </Text>
             </View>
-            <Text style={styles.identityValue} numberOfLines={1}>สวัสดี, {username}</Text>
+            <Text style={styles.identityValue} numberOfLines={1}>
+              {isAdmin ? 'สวัสดี, Admin' : `สวัสดี, ${username}`}
+            </Text>
           </View>
         </View>
-        {auth.currentUser ? (
+
+        {isAdmin ? (
+          <TouchableOpacity
+            style={styles.adminControlButton}
+            onPress={() => navigation.navigate('Admin')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.adminControlButtonText}>⚙️ แผงควบคุม</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {auth.currentUser || isAdmin ? (
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
             <Text style={styles.logoutButtonText}>🚪 ออก</Text>
           </TouchableOpacity>
@@ -234,6 +268,34 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Admin Control Panel Card (Visible when Admin) */}
+      {isAdmin && (
+        <TouchableOpacity
+          style={styles.adminBannerCard}
+          onPress={() => navigation.navigate('Admin')}
+          activeOpacity={0.9}
+        >
+          <View style={styles.adminBannerSheen} />
+          <View style={styles.adminBannerContent}>
+            <View style={styles.adminBannerLeft}>
+              <View style={styles.adminBannerIconWrap}>
+                <Text style={styles.adminBannerIcon}>⚙️</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.adminBadgeRow}>
+                  <Text style={styles.adminBadgeTextTag}>👑 ADMIN CONTROL PANEL</Text>
+                </View>
+                <Text style={styles.adminBannerTitle}>เปิดแผงควบคุมแอดมิน</Text>
+                <Text style={styles.adminBannerSubtitle}>จัดการคำถาม ผู้เล่น คะแนน และดูสถิติระบบแบบเรียลไทม์</Text>
+              </View>
+            </View>
+            <View style={styles.adminArrowWrap}>
+              <Text style={styles.adminArrowText}>➔</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* Epic Hero Title Card */}
       <View style={styles.heroCard}>
@@ -1278,5 +1340,110 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 0.5
+  },
+  adminAvatarCircle: {
+    backgroundColor: 'rgba(245, 158, 11, 0.25)',
+    borderColor: '#FBBF24'
+  },
+  adminControlButton: {
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderWidth: 1.5,
+    borderColor: '#FBBF24',
+    borderRadius: radii.xl,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#FBBF24',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 3
+  },
+  adminControlButtonText: {
+    color: '#FDE68A',
+    fontSize: 12,
+    fontWeight: '900'
+  },
+  adminBannerCard: {
+    backgroundColor: '#1E1B4B',
+    borderRadius: radii.xl,
+    borderWidth: 1.5,
+    borderColor: '#FBBF24',
+    padding: 14,
+    marginBottom: 14,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#FBBF24',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6
+  },
+  adminBannerSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#FBBF24'
+  },
+  adminBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  adminBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12
+  },
+  adminBannerIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    borderWidth: 1.5,
+    borderColor: '#FBBF24',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  adminBannerIcon: {
+    fontSize: 22
+  },
+  adminBadgeRow: {
+    marginBottom: 2
+  },
+  adminBadgeTextTag: {
+    color: '#FBBF24',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.8
+  },
+  adminBannerTitle: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 2
+  },
+  adminBannerSubtitle: {
+    color: '#C7D2FE',
+    fontSize: 11,
+    lineHeight: 16
+  },
+  adminArrowWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8
+  },
+  adminArrowText: {
+    color: '#FBBF24',
+    fontSize: 16,
+    fontWeight: '900'
   }
 });
