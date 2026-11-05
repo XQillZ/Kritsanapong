@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -15,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenShell from '../components/ScreenShell';
 import { auth } from '../services/firebase';
 import { colors, radii, shadows } from '../theme/appTheme';
+import { showAlert } from '../utils/alertUtils';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -26,7 +26,7 @@ export default function LoginScreen({ navigation }) {
     const trimmedPassword = password.trim();
 
     if (!trimmedEmail || !trimmedPassword) {
-      Alert.alert('ข้อผิดพลาด', 'กรุณากรอกอีเมลและรหัสผ่าน');
+      showAlert('ข้อผิดพลาด', 'กรุณากรอกอีเมลและรหัสผ่าน');
       return;
     }
 
@@ -36,12 +36,12 @@ export default function LoginScreen({ navigation }) {
     if (trimmedEmail.toLowerCase() === 'admin' && trimmedPassword === 'admin') {
       try {
         await AsyncStorage.setItem('isAdmin', 'true');
-        Alert.alert('สำเร็จ', 'เข้าสู่ระบบในฐานะผู้ดูแลระบบ (Admin)', [
+        showAlert('สำเร็จ', 'เข้าสู่ระบบในฐานะผู้ดูแลระบบ (Admin)', [
           { text: 'ตกลง', onPress: () => navigation.replace('Admin') }
         ]);
       } catch (e) {
         console.error('Error saving admin status:', e);
-        Alert.alert('ข้อผิดพลาด', 'ไม่สามารถบันทึกสถานะผู้ดูแลระบบได้');
+        showAlert('ข้อผิดพลาด', 'ไม่สามารถบันทึกสถานะผู้ดูแลระบบได้');
       } finally {
         setLoading(false);
       }
@@ -52,19 +52,22 @@ export default function LoginScreen({ navigation }) {
     try {
       await AsyncStorage.removeItem('isAdmin');
       await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
-      Alert.alert('สำเร็จ', 'เข้าสู่ระบบเรียบร้อย', [
+      showAlert('สำเร็จ', 'เข้าสู่ระบบเรียบร้อย', [
         { text: 'ตกลง', onPress: () => navigation.replace('Home') }
       ]);
     } catch (error) {
-      let errorMessage = 'ไม่สามารถเข้าสู่ระบบได้';
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'ไม่พบผู้ใช้งานนี้';
+      console.error('Login error:', error);
+      let errorMessage = 'ไม่สามารถเข้าสู่ระบบได้ กรุณาตรวจสอบอีเมลและรหัสผ่าน';
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        errorMessage = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
       } else if (error.code === 'auth/wrong-password') {
         errorMessage = 'รหัสผ่านไม่ถูกต้อง';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'ลองเข้าสู่ระบบบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่';
       }
-      Alert.alert('เข้าสู่ระบบไม่สำเร็จ', errorMessage);
+      showAlert('เข้าสู่ระบบไม่สำเร็จ', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -72,23 +75,23 @@ export default function LoginScreen({ navigation }) {
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      Alert.alert('คำแนะนำ', 'กรุณากรอกอีเมลของคุณในช่องอีเมล แล้วกดลืมรหัสผ่านอีกครั้ง เพื่อรับลิงก์รีเซ็ตรหัสผ่าน');
+      showAlert('คำแนะนำ', 'กรุณากรอกอีเมลของคุณในช่องอีเมล แล้วกดลืมรหัสผ่านอีกครั้ง เพื่อรับลิงก์รีเซ็ตรหัสผ่าน');
       return;
     }
 
     setLoading(true);
     try {
       auth.languageCode = 'th';
-      await sendPasswordResetEmail(auth, email);
-      Alert.alert('ส่งอีเมลสำเร็จ', 'ลิงก์สำหรับรีเซ็ตรหัสผ่านถูกส่งไปยังอีเมลของคุณแล้ว กรุณาตรวจสอบกล่องข้อความ (หรือ Junk Mail)');
+      await sendPasswordResetEmail(auth, email.trim());
+      showAlert('ส่งอีเมลสำเร็จ', 'ลิงก์สำหรับรีเซ็ตรหัสผ่านถูกส่งไปยังอีเมลของคุณแล้ว กรุณาตรวจสอบกล่องข้อความ (หรือ Junk Mail)');
     } catch (error) {
       let errorMessage = 'ไม่สามารถส่งอีเมลรีเซ็ตรหัสผ่านได้';
-      if (error.code === 'auth/user-not-found') {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         errorMessage = 'ไม่พบบัญชีผู้ใช้นี้ในระบบ';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'รูปแบบอีเมลไม่ถูกต้อง';
       }
-      Alert.alert('ข้อผิดพลาด', errorMessage);
+      showAlert('ข้อผิดพลาด', errorMessage);
     } finally {
       setLoading(false);
     }

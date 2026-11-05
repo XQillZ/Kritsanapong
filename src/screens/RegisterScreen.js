@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -15,6 +14,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import ScreenShell from '../components/ScreenShell';
 import { auth, db } from '../services/firebase';
 import { colors, radii, shadows } from '../theme/appTheme';
+import { showAlert } from '../utils/alertUtils';
 
 export default function RegisterScreen({ navigation }) {
   const [username, setUsername] = useState('');
@@ -25,24 +25,24 @@ export default function RegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     if (!username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-      Alert.alert('ข้อผิดพลาด', 'กรุณากรอกข้อมูลให้ครบถ้วน');
+      showAlert('ข้อผิดพลาด', 'กรุณากรอกข้อมูลให้ครบถ้วน');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('ข้อผิดพลาด', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+      showAlert('ข้อผิดพลาด', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('ข้อผิดพลาด', 'รหัสผ่านไม่ตรงกัน');
+      showAlert('ข้อผิดพลาด', 'รหัสผ่านไม่ตรงกัน');
       return;
     }
 
     setLoading(true);
     try {
       // 1. Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password.trim());
       const user = userCredential.user;
 
       // 2. Update Auth profile with username
@@ -60,10 +60,11 @@ export default function RegisterScreen({ navigation }) {
         createdAt: new Date()
       });
 
-      Alert.alert('สำเร็จ', 'สมัครสมาชิกเรียบร้อย', [
+      showAlert('สำเร็จ', 'สมัครสมาชิกเรียบร้อย', [
         { text: 'ตกลง', onPress: () => navigation.replace('Home') }
       ]);
     } catch (error) {
+      console.error('Register error:', error);
       let errorMessage = 'ไม่สามารถสมัครสมาชิกได้';
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'อีเมลนี้ถูกใช้งานแล้ว';
@@ -72,7 +73,7 @@ export default function RegisterScreen({ navigation }) {
       } else if (error.code === 'auth/weak-password') {
         errorMessage = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร';
       }
-      Alert.alert('สมัครสมาชิกไม่สำเร็จ', errorMessage);
+      showAlert('สมัครสมาชิกไม่สำเร็จ', errorMessage);
     } finally {
       setLoading(false);
     }

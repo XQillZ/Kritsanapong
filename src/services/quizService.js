@@ -58,7 +58,7 @@ export const fetchQuestionsByCategory = async (category, difficulty = null) => {
   }
 };
 
-export const fetchAllQuestions = async () => {
+export const fetchAllQuestions = async () => { //ดึงคำถามทั้งหมด
   try {
     const q = query(collection(db, QUESTIONS_COLLECTION));
     const querySnapshot = await getDocs(q);

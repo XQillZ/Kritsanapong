@@ -26,6 +26,8 @@ import ScreenShell from '../components/ScreenShell';
 import { db } from '../services/firebase';
 import { clearQuestionsCache } from '../services/quizService';
 import { colors, radii, shadows } from '../theme/appTheme';
+import { showAlert } from '../utils/alertUtils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AdminScreen({ navigation }) {
   const [activeTab, setActiveTab] = useState('questions'); // 'questions' | 'users'
@@ -82,6 +84,25 @@ export default function AdminScreen({ navigation }) {
     }
   };
 
+  const handleAdminLogout = () => {
+    showAlert(
+      'ออกจากระบบ',
+      'คุณต้องการออกจากระบบผู้ดูแลระบบ (Admin) หรือไม่?',
+      [
+        { text: 'ยกเลิก', style: 'cancel' },
+        {
+          text: 'ออกจากระบบ',
+          style: 'destructive',
+          onPress: async () => {
+            stopAudio();
+            await AsyncStorage.removeItem('isAdmin');
+            navigation.replace('Login');
+          }
+        }
+      ]
+    );
+  };
+
   const playAudio = async (audioUrl, idKey) => {
     if (!audioUrl || !audioUrl.trim()) return;
 
@@ -115,7 +136,7 @@ export default function AdminScreen({ navigation }) {
       });
     } catch (error) {
       console.error('Error playing audio in admin screen:', error);
-      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเล่นไฟล์เสียงนี้ได้ กรุณาตรวจสอบ URL หรือการเชื่อมต่อ');
+      showAlert('ข้อผิดพลาด', 'ไม่สามารถเล่นไฟล์เสียงนี้ได้ กรุณาตรวจสอบ URL หรือการเชื่อมต่อ');
       setPlayingAudioId(null);
       setLoadingAudioId(null);
     }
@@ -138,7 +159,7 @@ export default function AdminScreen({ navigation }) {
       setQuestions(qList);
     } catch (error) {
       console.error('Error fetching questions:', error);
-      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลคำถามได้');
+      showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลคำถามได้');
     } finally {
       setLoadingQuestions(false);
     }
@@ -222,7 +243,7 @@ export default function AdminScreen({ navigation }) {
   // Save Question (Add or Update)
   const handleSaveQuestion = async () => {
     if (!formQuestion.trim() || !formAnswer.trim()) {
-      Alert.alert('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกคำถามและคำตอบภาษาไทย');
+      showAlert('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกคำถามและคำตอบภาษาไทย');
       return;
     }
 
@@ -242,11 +263,11 @@ export default function AdminScreen({ navigation }) {
         // Update existing document
         const docRef = doc(db, 'questions', editingQuestion.id);
         await updateDoc(docRef, questionData);
-        Alert.alert('สำเร็จ', 'อัปเดตคำถามเรียบร้อย');
+        showAlert('สำเร็จ', 'อัปเดตคำถามเรียบร้อย');
       } else {
         // Add new document
         await addDoc(collection(db, 'questions'), questionData);
-        Alert.alert('สำเร็จ', 'เพิ่มคำถามใหม่เรียบร้อย');
+        showAlert('สำเร็จ', 'เพิ่มคำถามใหม่เรียบร้อย');
       }
 
       clearQuestionsCache();
@@ -255,7 +276,7 @@ export default function AdminScreen({ navigation }) {
       fetchQuestions();
     } catch (error) {
       console.error('Error saving question:', error);
-      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลคำถามได้');
+      showAlert('ข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลคำถามได้');
     } finally {
       setSavingQuestion(false);
     }
@@ -263,7 +284,7 @@ export default function AdminScreen({ navigation }) {
 
   // Delete Question
   const handleDeleteQuestion = (questionId) => {
-    Alert.alert(
+    showAlert(
       'ยืนยันการลบคำถาม',
       'คุณต้องการลบคำถามนี้ออกจากระบบใช่หรือไม่?',
       [
@@ -276,11 +297,11 @@ export default function AdminScreen({ navigation }) {
               stopAudio();
               await deleteDoc(doc(db, 'questions', questionId));
               clearQuestionsCache();
-              Alert.alert('สำเร็จ', 'ลบคำถามเรียบร้อยแล้ว');
+              showAlert('สำเร็จ', 'ลบคำถามเรียบร้อยแล้ว');
               fetchQuestions();
             } catch (error) {
               console.error('Error deleting question:', error);
-              Alert.alert('ข้อผิดพลาด', 'ไม่สามารถลบคำถามได้');
+              showAlert('ข้อผิดพลาด', 'ไม่สามารถลบคำถามได้');
             }
           }
         }
@@ -290,7 +311,7 @@ export default function AdminScreen({ navigation }) {
 
   // Reset User Score
   const handleResetUserScore = (userId, userName) => {
-    Alert.alert(
+    showAlert(
       'ยืนยันรีเซ็ตคะแนน',
       `คุณต้องการรีเซ็ตคะแนนของผู้เล่น "${userName}" เป็น 0 ใช่หรือไม่?`,
       [
@@ -305,11 +326,11 @@ export default function AdminScreen({ navigation }) {
                 gamesPlayed: 0,
                 scores: {}
               });
-              Alert.alert('สำเร็จ', 'รีเซ็ตคะแนนเรียบร้อยแล้ว');
+              showAlert('สำเร็จ', 'รีเซ็ตคะแนนเรียบร้อยแล้ว');
               fetchUsers();
             } catch (error) {
               console.error('Error resetting score:', error);
-              Alert.alert('ข้อผิดพลาด', 'ไม่สามารถรีเซ็ตคะแนนได้');
+              showAlert('ข้อผิดพลาด', 'ไม่สามารถรีเซ็ตคะแนนได้');
             }
           }
         }
@@ -319,7 +340,7 @@ export default function AdminScreen({ navigation }) {
 
   // Delete User
   const handleDeleteUser = (userId, userName) => {
-    Alert.alert(
+    showAlert(
       'ยืนยันลบผู้เล่น',
       `คุณต้องการลบผู้เล่น "${userName}" ออกจากระบบใช่หรือไม่?`,
       [
@@ -330,11 +351,11 @@ export default function AdminScreen({ navigation }) {
           onPress: async () => {
             try {
               await deleteDoc(doc(db, 'users', userId));
-              Alert.alert('สำเร็จ', 'ลบผู้เล่นออกจากระบบเรียบร้อย');
+              showAlert('สำเร็จ', 'ลบผู้เล่นออกจากระบบเรียบร้อย');
               fetchUsers();
             } catch (error) {
               console.error('Error deleting user:', error);
-              Alert.alert('ข้อผิดพลาด', 'ไม่สามารถลบผู้เล่นได้');
+              showAlert('ข้อผิดพลาด', 'ไม่สามารถลบผู้เล่นได้');
             }
           }
         }
@@ -370,11 +391,11 @@ export default function AdminScreen({ navigation }) {
           </View>
 
           <TouchableOpacity
-            style={styles.homeBtn}
-            onPress={() => navigation.navigate('Home')}
+            style={styles.logoutBtn}
+            onPress={handleAdminLogout}
             activeOpacity={0.8}
           >
-            <Text style={styles.homeBtnText}>🏠 หน้าหลัก</Text>
+            <Text style={styles.logoutBtnText}>🚪 ออกจากระบบ</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1077,16 +1098,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900'
   },
-  homeBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  logoutBtn: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#EF4444',
     borderRadius: radii.lg,
     paddingHorizontal: 12,
     paddingVertical: 8
   },
-  homeBtnText: {
-    color: colors.white,
+  logoutBtnText: {
+    color: '#F87171',
     fontSize: 12,
     fontWeight: '800'
   },

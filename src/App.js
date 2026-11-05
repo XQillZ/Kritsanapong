@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './services/firebase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from './theme/appTheme';
 
 // 7 Screens as requested: Home, Login, Register, Game, Category, Result, Leaderboard
@@ -37,9 +38,19 @@ export default function App() {
   const [initialRoute, setInitialRoute] = useState('Login');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setInitialRoute(user ? 'Home' : 'Login');
-      setIsBooting(false);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      try {
+        const isAdmin = await AsyncStorage.getItem('isAdmin');
+        if (isAdmin === 'true') {
+          setInitialRoute('Admin');
+        } else {
+          setInitialRoute(user ? 'Home' : 'Login');
+        }
+      } catch (e) {
+        setInitialRoute(user ? 'Home' : 'Login');
+      } finally {
+        setIsBooting(false);
+      }
     });
 
     return unsubscribe;

@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import ScreenShell from '../components/ScreenShell';
 import { auth, db } from '../services/firebase';
 import { colors, radii, shadows } from '../theme/appTheme';
+import { showAlert } from '../utils/alertUtils';
 
 export default function HomeScreen({ navigation }) {
   const [username, setUsername] = useState('');
@@ -168,10 +169,11 @@ export default function HomeScreen({ navigation }) {
     try {
       const val = await AsyncStorage.getItem('isAdmin');
       const adminActive = val === 'true';
-      setIsAdmin(adminActive);
       if (adminActive) {
-        setUsername('Admin');
+        navigation.replace('Admin');
+        return;
       }
+      setIsAdmin(false);
     } catch (e) {
       console.error('Error reading admin status:', e);
     }
@@ -204,7 +206,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleLogout = () => {
-    Alert.alert(
+    showAlert(
       'ออกจากระบบ',
       'คุณต้องการออกจากระบบหรือไม่?',
       [
@@ -219,7 +221,7 @@ export default function HomeScreen({ navigation }) {
               await signOut(auth);
               navigation.replace('Login');
             } catch (error) {
-              Alert.alert('ข้อผิดพลาด', 'ไม่สามารถออกจากระบบได้');
+              showAlert('ข้อผิดพลาด', 'ไม่สามารถออกจากระบบได้');
             }
           }
         }
@@ -248,17 +250,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {isAdmin ? (
-          <TouchableOpacity
-            style={styles.adminControlButton}
-            onPress={() => navigation.navigate('Admin')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.adminControlButtonText}>⚙️ แผงควบคุม</Text>
-          </TouchableOpacity>
-        ) : null}
-
-        {auth.currentUser || isAdmin ? (
+        {auth.currentUser ? (
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
             <Text style={styles.logoutButtonText}>🚪 ออก</Text>
           </TouchableOpacity>
@@ -268,34 +260,6 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
         )}
       </View>
-
-      {/* Admin Control Panel Card (Visible when Admin) */}
-      {isAdmin && (
-        <TouchableOpacity
-          style={styles.adminBannerCard}
-          onPress={() => navigation.navigate('Admin')}
-          activeOpacity={0.9}
-        >
-          <View style={styles.adminBannerSheen} />
-          <View style={styles.adminBannerContent}>
-            <View style={styles.adminBannerLeft}>
-              <View style={styles.adminBannerIconWrap}>
-                <Text style={styles.adminBannerIcon}>⚙️</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={styles.adminBadgeRow}>
-                  <Text style={styles.adminBadgeTextTag}>👑 ADMIN CONTROL PANEL</Text>
-                </View>
-                <Text style={styles.adminBannerTitle}>เปิดแผงควบคุมแอดมิน</Text>
-                <Text style={styles.adminBannerSubtitle}>จัดการคำถาม ผู้เล่น คะแนน และดูสถิติระบบแบบเรียลไทม์</Text>
-              </View>
-            </View>
-            <View style={styles.adminArrowWrap}>
-              <Text style={styles.adminArrowText}>➔</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      )}
 
       {/* Epic Hero Title Card */}
       <View style={styles.heroCard}>

@@ -20,8 +20,9 @@ import { getHintFromGemini } from '../services/aiService';
 import ScreenShell from '../components/ScreenShell';
 import { categoryMeta, colors, difficultyMeta, radii, shadows } from '../theme/appTheme';
 import { getQuestionPrompt } from '../utils/questionPrompt';
+import { showAlert } from '../utils/alertUtils';
 
-const QUESTIONS_PER_GAME = 10;
+const QUESTIONS_PER_GAME = 10; //จำนวนข้อในเกมต่อการเล่น
 
 export default function GameScreen({ navigation, route }) {
   const { category, difficulty } = route.params;
@@ -34,6 +35,7 @@ export default function GameScreen({ navigation, route }) {
   const [showingFeedback, setShowingFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
   const [sound, setSound] = useState();
   const [isPlaying, setIsPlaying] = useState(false);
   const soundRef = useRef(null);
@@ -52,11 +54,23 @@ export default function GameScreen({ navigation, route }) {
     };
   }, []);
 
+  // รีเซ็ตสถานะโหลดรูปภาพทุกครั้งที่เปลี่ยนข้อ และตั้ง timeout กันค้าง
+  useEffect(() => {
+    setImageLoading(true);
+    setImageError(false);
+
+    const safetyTimer = setTimeout(() => {
+      setImageLoading(false);
+    }, 4000);
+
+    return () => clearTimeout(safetyTimer);
+  }, [currentIndex]);
+
   const loadQuestions = async () => {
     try {
       const allQuestions = await fetchQuestionsByCategory(category.id, difficulty);
       if (allQuestions.length === 0) {
-        Alert.alert('ไม่พบคำถาม', 'หมวดหมู่นี้ยังไม่มีคำถาม', [
+        showAlert('ไม่พบคำถาม', 'หมวดหมู่นี้ยังไม่มีคำถาม', [
           { text: 'กลับ', onPress: () => navigation.goBack() }
         ]);
         return;
@@ -78,7 +92,7 @@ export default function GameScreen({ navigation, route }) {
       
       setQuestions(processedQuestions);
     } catch (error) {
-      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถโหลดคำถามได้');
+      showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดคำถามได้');
     } finally {
       setLoading(false);
     }
@@ -163,7 +177,7 @@ export default function GameScreen({ navigation, route }) {
 
   const handleSubmit = () => {
     if (!userAnswer.trim()) {
-      Alert.alert('กรุณากรอกคำตอบ');
+      showAlert('กรุณากรอกคำตอบ');
       return;
     }
 
@@ -305,13 +319,26 @@ export default function GameScreen({ navigation, route }) {
                     <ActivityIndicator size="large" color={category.color} />
                   </View>
                 )}
-                <Image
-                  source={{ uri: currentQuestion.imageUrl }}
-                  style={styles.image}
-                  resizeMode="cover"
-                  onLoadStart={() => setImageLoading(true)}
-                  onLoadEnd={() => setImageLoading(false)}
-                />
+                {imageError ? (
+                  <View style={styles.imageErrorPlaceholder}>
+                    <Text style={{ fontSize: 32, marginBottom: 8 }}>🖼️</Text>
+                    <Text style={styles.imageErrorTitle}>ภาพจากเซิร์ฟเวอร์ปลายทางโหลดไม่สำเร็จ</Text>
+                    <Text style={styles.imageErrorDesc}>สามารถอ่านโจทย์และพิมพ์คำตอบได้เลยครับ</Text>
+                  </View>
+                ) : (
+                  <Image
+                    key={`quiz-img-${currentIndex}-${currentQuestion.imageUrl}`}
+                    source={{ uri: currentQuestion.imageUrl }}
+                    style={styles.image}
+                    resizeMode="cover"
+                    onLoad={() => setImageLoading(false)}
+                    onLoadEnd={() => setImageLoading(false)}
+                    onError={() => {
+                      setImageLoading(false);
+                      setImageError(true);
+                    }}
+                  />
+                )}
               </View>
             )}
 
@@ -654,6 +681,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#05021a',
     zIndex: 1
+  },
+  imageErrorPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    padding: 16
+  },
+  imageErrorTitle: {
+    color: '#F87171',
+    fontSize: 13,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 4
+  },
+  imageErrorDesc: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    textAlign: 'center'
   },
   image: {
     width: '100%',
