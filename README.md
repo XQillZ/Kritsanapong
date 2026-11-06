@@ -1,6 +1,7 @@
 วีดิโอแนะนำโปรเจค
 https://www.youtube.com/watch?v=2moHXctWKQE
-#🎮 AI Guessing Game (React Native + Expo + Firebase + Gemini AI)
+#
+🎮 AI Guessing Game (React Native + Expo + Firebase + Gemini AI)
 
 แอปพลิเคชันเกมทายปัญหาและปริศนาภาพ-เสียง มัลติมีเดียแบบอินเทอร์แอคทีฟ พัฒนาด้วย **React Native (Expo SDK 52)** ผสานพลัง **Firebase** (Auth & Firestore) และ **Google Gemini AI** สำหรับระบบคำใบ้อัจฉริยะแบบเรียลไทม์
 
